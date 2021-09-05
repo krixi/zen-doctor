@@ -24,7 +24,7 @@ func NewGameState(level Level) GameState {
 func (s *GameState) String() string {
 	s.View.ApplyBitStream(s.World)
 	s.View.ApplyWorld(s.World)
-	s.View.ApplyPlayer(s.Player)
+	s.View.ApplyPlayer(s)
 	return s.View.String()
 }
 

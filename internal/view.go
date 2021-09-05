@@ -16,7 +16,7 @@ func CalculateViewPosition(width, height, screenWidth, screenHeight int) (int, i
 type Color int
 
 const (
-	DarkBlue    Color = 20
+	Blue        Color = 20
 	LightBlue   Color = 81
 	Teal        Color = 85
 	Green       Color = 118
@@ -27,10 +27,17 @@ const (
 	YellowGreen Color = 190
 	Pink        Color = 200
 	Yellow      Color = 226
+	DarkGray    Color = 235
+	LightGray   Color = 245
+	White       Color = 255
 )
 
 func WithColor(color Color, msg string) string {
 	return fmt.Sprintf("\x1b[38;5;%dm%s\x1b[0m", int(color), msg)
+}
+
+func WithBackground(color Color, msg string) string {
+	return fmt.Sprintf("\x1b[48;5;%dm%s\x1b[0m", int(color), msg)
 }
 
 type View struct {
@@ -64,13 +71,13 @@ func (v *View) ApplyWorld(world World) {
 	for c, cell := range world.Grid {
 		switch cell.Type {
 		case CellTypeDelta:
-			v.Data[c] = WithColor(Yellow, DeltaSymbol)
+			v.Data[c] = WithColor(White, DeltaSymbol)
 		case CellTypeLambda:
-			v.Data[c] = WithColor(Yellow, LambdaSymbol)
+			v.Data[c] = WithColor(Green, LambdaSymbol)
 		case CellTypeSigma:
-			v.Data[c] = WithColor(Yellow, SigmaSymbol)
+			v.Data[c] = WithColor(Blue, SigmaSymbol)
 		case CellTypeOmega:
-			v.Data[c] = WithColor(Yellow, OmegaSymbol)
+			v.Data[c] = WithColor(Purple, OmegaSymbol)
 		}
 	}
 }
@@ -78,14 +85,41 @@ func (v *View) ApplyWorld(world World) {
 // ApplyBitStream populates the view with the bit stream
 func (v *View) ApplyBitStream(world World) {
 	for c, bs := range world.BitStream {
-		v.Data[c] = bs
+		v.Data[c] = WithColor(DarkGray, bs)
 	}
 }
 
 // ApplyPlayer masks the bit stream
-func (v *View) ApplyPlayer(player Player) {
-	v.Data[player.Location] = WithColor(Purple, PlayerSymbol)
+func (v *View) ApplyPlayer(s *GameState) {
+	c := s.Player.Location
+	v.Data[c] = WithColor(Purple, PlayerSymbol)
 
 	// view distance
+	vdx := s.Player.ViewDistX
+	vdy := s.Player.ViewDistY
+	for x := c.X - vdx; x <= c.X+vdx; x++ {
+		for y := c.Y - vdy; y <= c.Y+vdy; y++ {
 
+			offset := Coordinate{x, y}
+
+			// skip out of bounds
+			if _, ok := v.Data[offset]; !ok {
+				continue
+			}
+
+			// give player a dark background but that's it
+			v.Data[offset] = WithBackground(DarkGray, v.Data[offset])
+			if x == c.X && y == c.Y {
+				continue
+			}
+			if s.World.Grid[offset].Type != CellTypeEmpty {
+				continue
+			}
+
+			// show the bit stream around them with a background
+			if s.World.BitStream[offset] != " " {
+				v.Data[offset] = WithBackground(DarkGray, WithColor(LightGray, s.World.BitStream[offset]))
+			}
+		}
+	}
 }

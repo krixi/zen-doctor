@@ -83,6 +83,7 @@ func newWorld(level LevelSettings) World {
 
 func (w *World) shiftBitStream(x, y int) {
 	newStream := make(map[Coordinate]string)
+	// TODO: generate new bits
 	for coord, val := range w.BitStream {
 		c := Coordinate{
 			X: (coord.X + x) % w.width,
