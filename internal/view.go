@@ -2,10 +2,12 @@ package zen_doctor
 
 import "fmt"
 
-func CalculateViewPosition(width, height, screenWidth, screenHeight int) (int, int) {
-	x := screenWidth/2 - width/2
-	y := screenHeight/2 - height/2
-	return x, y
+func CalculateViewPosition(width, height, screenWidth, screenHeight int) (int, int, int, int) {
+	x1 := screenWidth/2 - width/2
+	y1 := screenHeight/2 - height/2
+	x2 := x1 + width
+	y2 := y1 + height
+	return x1, y1, x2, y2
 }
 
 type Color int

@@ -17,9 +17,9 @@ type GameState struct {
 	View         map[Coordinate]string
 }
 
-func NewGameState() GameState {
+func NewGameState(level Level) GameState {
 	return GameState{
-		CurrentLevel: Tutorial,
+		CurrentLevel: level,
 	}
 }
 
@@ -53,7 +53,7 @@ func (s *GameState) String() string {
 	for y := 0; y < level.Height; y++ {
 		for x := 0; x < level.Width; x++ {
 			c := Coordinate{x, y}
-			b.WriteString(s.View[c])
+			b.WriteString(WithColor(Green, s.View[c]))
 		}
 		b.WriteString("\n")
 	}
