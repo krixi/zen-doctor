@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	done = make(chan bool)
+	done          = make(chan bool)
 	selectedLevel = zen_doctor.Tutorial
 )
+
 const menuView = "menu"
 
 func main() {
@@ -26,7 +27,7 @@ func main() {
 	defer g.Close()
 
 	g.Highlight = true
-	g.SelBgColor = gocui.ColorGreen
+	g.SelFgColor = gocui.ColorGreen
 	g.SetManagerFunc(layout)
 	// set the menu as the initial view
 	g.Update(func(gui *gocui.Gui) error {
@@ -43,9 +44,6 @@ func main() {
 	}
 }
 
-
-
-
 func layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
 	width, height := 50, 20
@@ -55,6 +53,16 @@ func layout(g *gocui.Gui) error {
 		}
 		v.Title = "Choose level"
 		renderMenu(v)
+	}
+
+	if v, err := g.SetView("help", maxX-25, 0, maxX-1, 9); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+		v.Title = "Help"
+		fmt.Fprintln(v, "Keys")
+		fmt.Fprintln(v, "← ↑ → ↓: Move")
+		fmt.Fprintln(v, "^C:      Exit")
 	}
 	return nil
 }
@@ -87,7 +95,6 @@ func menuDown(_ *gocui.Gui, v *gocui.View) error {
 }
 
 func keybindings(g *gocui.Gui) error {
-
 	if err := g.SetKeybinding(menuView, gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
 	}
@@ -100,17 +107,6 @@ func keybindings(g *gocui.Gui) error {
 	if err := g.SetKeybinding(menuView, gocui.KeyEnter, gocui.ModNone, loadGame); err != nil {
 		log.Panicln(err)
 	}
-
-	//if err := g.SetKeybinding("", gocui.KeyCtrlD, gocui.ModNone, func(gui *gocui.Gui, view *gocui.View) error {
-	//	// fmt.Fprintf(gui.CurrentView(), "this is the current window\n")
-	//	menu, _ := gui.View(menuView)
-	//	fmt.Fprintf(menu, "sending done\n")
-	//	done <- true
-	//
-	//	return nil
-	//}); err != nil {
-	//	log.Panicln(err)
-	//}
 	return nil
 }
 
@@ -139,7 +135,8 @@ func quit(_ *gocui.Gui, _ *gocui.View) error {
 	return gocui.ErrQuit
 }
 
-func endGame(level zen_doctor.LevelInfo) func(g *gocui.Gui, _ *gocui.View) error {
+// callback hell :notlikethis:
+func endGame(level zen_doctor.LevelSettings) func(g *gocui.Gui, _ *gocui.View) error {
 	return func(g *gocui.Gui, _ *gocui.View) error {
 		g.Update(func(g *gocui.Gui) error {
 			// go back to menu view
@@ -157,21 +154,46 @@ func endGame(level zen_doctor.LevelInfo) func(g *gocui.Gui, _ *gocui.View) error
 	}
 }
 
+func movePlayer(state *zen_doctor.GameState, dir zen_doctor.Direction) func(g *gocui.Gui, v *gocui.View) error {
+	return func(g *gocui.Gui, v *gocui.View) error {
+		state.MovePlayer(dir)
+		v.Clear()
+		fmt.Fprintf(v, "%s", state.String())
+		return nil
+	}
+}
+
 func gameLoop(g *gocui.Gui, lvl zen_doctor.Level) {
 	ticker := time.NewTicker((1000 / 5) * time.Millisecond)
 	defer ticker.Stop()
 
 	state := zen_doctor.NewGameState(lvl)
-	state.InitView()
 	level := zen_doctor.GetLevel(state.CurrentLevel)
 
-	// callback hell :notlikethis:
 	g.Update(func(g *gocui.Gui) error {
+		// in-game keybinds
 		if err := g.SetKeybinding(level.Name(), gocui.KeyCtrlC, gocui.ModNone, endGame(level)); err != nil {
 			return err
 		}
-		_, err := g.SetCurrentView(level.Name())
-		return err
+		if err := g.SetKeybinding(level.Name(), gocui.KeyArrowUp, gocui.ModNone, movePlayer(&state, zen_doctor.MoveUp)); err != nil {
+			return err
+		}
+		if err := g.SetKeybinding(level.Name(), gocui.KeyArrowDown, gocui.ModNone, movePlayer(&state, zen_doctor.MoveDown)); err != nil {
+			return err
+		}
+		if err := g.SetKeybinding(level.Name(), gocui.KeyArrowLeft, gocui.ModNone, movePlayer(&state, zen_doctor.MoveLeft)); err != nil {
+			return err
+		}
+		if err := g.SetKeybinding(level.Name(), gocui.KeyArrowRight, gocui.ModNone, movePlayer(&state, zen_doctor.MoveRight)); err != nil {
+			return err
+		}
+		v, err := g.SetCurrentView(level.Name())
+		if err != nil {
+			return err
+		}
+		v.Clear()
+		fmt.Fprintf(v, "%s", state.String())
+		return nil
 	})
 
 	for {
@@ -186,7 +208,7 @@ func gameLoop(g *gocui.Gui, lvl zen_doctor.Level) {
 					return err
 				}
 				v.Clear()
-				state.Shift(0, 1)
+				state.Tick()
 				fmt.Fprintf(v, "%s", state.String())
 
 				return nil

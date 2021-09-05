@@ -1,74 +1,62 @@
 package zen_doctor
 
-import (
-	"math/rand"
-	"strings"
-)
-
-type Coordinate struct {
-	X int
-	Y int
-}
-
-
+import "sync"
 
 type GameState struct {
 	CurrentLevel Level
-	View         map[Coordinate]string
+	Player       Player
+	World        World
+	View         View
+	mu           sync.Mutex
 }
 
 func NewGameState(level Level) GameState {
+	l := GetLevel(level)
 	return GameState{
 		CurrentLevel: level,
+		World:        newWorld(l),
+		Player:       newPlayer(Coordinate{0, 0}),
+		View:         newView(l.Width, l.Height),
 	}
 }
 
-var choices = []string{
-	"0",
-	"1",
-}
-
-func getCell() string {
-	if rand.Float32() < 0.2 {
-		return choices[rand.Intn(len(choices))]
-	} else {
-		return " "
-	}
-}
-
-func (s *GameState) InitView() {
-	level := GetLevel(s.CurrentLevel)
-	s.View = make(map[Coordinate]string)
-	for x := 0; x < level.Width; x++ {
-		for y := 0; y < level.Height; y++ {
-			c := Coordinate{x, y}
-			s.View[c] = getCell()
-		}
-	}
-}
-
+// We want to assemble a string that represents the final game state for this frame, so we do it in layers.
 func (s *GameState) String() string {
-	level := GetLevel(s.CurrentLevel)
-	b := strings.Builder{}
-	for y := 0; y < level.Height; y++ {
-		for x := 0; x < level.Width; x++ {
-			c := Coordinate{x, y}
-			b.WriteString(WithColor(Green, s.View[c]))
-		}
-		b.WriteString("\n")
-	}
-	return b.String()
+	s.View.ApplyBitStream(s.World)
+	s.View.ApplyWorld(s.World)
+	s.View.ApplyPlayer(s.Player)
+	return s.View.String()
 }
 
-func (s *GameState) Shift(x, y int) {
-	level := GetLevel(s.CurrentLevel)
-	newView := make(map[Coordinate]string)
-	for coord, val := range s.View {
-		c := Coordinate{
-			X: (coord.X + x) % level.Width,
-			Y: (coord.Y + y) % level.Height,
+func (s *GameState) Tick() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.World.shiftBitStream(0, 1)
+}
+
+func (s *GameState) MovePlayer(dir Direction) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	c := s.Player.Location
+	switch dir {
+	case MoveUp:
+		if c.Y-1 >= 0 {
+			c.Y--
 		}
-		newView[c] = val
+	case MoveDown:
+		if c.Y+1 < s.World.height {
+			c.Y++
+		}
+	case MoveLeft:
+		if c.X-1 >= 0 {
+			c.X--
+		}
+	case MoveRight:
+		if c.X+1 < s.World.width {
+			c.X++
+		}
 	}
-	s.View = newView
+	s.Player.Location = c
 }

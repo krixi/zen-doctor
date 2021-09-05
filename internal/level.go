@@ -2,13 +2,15 @@ package zen_doctor
 
 import "fmt"
 
-type LevelInfo struct {
-	Level Level
-	Width  int
-	Height int
+type LevelSettings struct {
+	Level        Level
+	Width        int
+	Height       int
+	ThreatRate   float32
+	DataRequired map[CellType]int
 }
 
-func (l LevelInfo) Name() string {
+func (l LevelSettings) Name() string {
 	return l.Level.String()
 }
 
@@ -25,11 +27,11 @@ func (l Level) Equals(i int) bool {
 }
 
 func (l Level) Inc() Level {
-	return l+1
+	return l + 1
 }
 
 func (l Level) Dec() Level {
-	return l-1
+	return l - 1
 }
 
 func (l Level) IsValid() bool {
@@ -50,26 +52,30 @@ func (l Level) String() string {
 }
 
 func Levels() []Level {
-	return []Level {
+	return []Level{
 		Tutorial,
 		Level1,
 		Level2,
 	}
 }
 
-func GetLevel(level Level) LevelInfo {
+func GetLevel(level Level) LevelSettings {
 	switch level {
 	case Tutorial:
-		return LevelInfo{
-			Level: Tutorial,
-			Width:  30,
-			Height: 10,
+		return LevelSettings{
+			Level:      Tutorial,
+			Width:      50,
+			Height:     20,
+			ThreatRate: 0.01,
+			DataRequired: map[CellType]int{
+				CellTypeDelta: 1,
+			},
 		}
 	default:
-		return LevelInfo{}
+		return LevelSettings{}
 	}
 }
 
-func (l LevelInfo) IsValid() bool {
+func (l LevelSettings) IsValid() bool {
 	return l.Level.IsValid() && l.Width > 0 && l.Height > 0
 }
