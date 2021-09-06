@@ -26,6 +26,6 @@ func (p *Player) tickThreat(rate, max float32) {
 	}
 }
 
-func (p *Player) isDetected(maxThreat int) bool {
-	return int(p.Threat) >= maxThreat
+func (p *Player) isDetected(maxThreat float32) bool {
+	return p.Threat >= maxThreat
 }

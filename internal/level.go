@@ -3,13 +3,14 @@ package zen_doctor
 import "fmt"
 
 type LevelSettings struct {
-	Level        Level
-	Width        int
-	Height       int
-	ThreatRate   float32
-	MaxThreat    int
-	FPS          int
-	DataRequired map[CellType]int
+	Level          Level
+	Width          int
+	Height         int
+	ThreatDecay    float32
+	MovementThreat float32
+	MaxThreat      float32
+	FPS            int
+	DataRequired   map[CellType]int
 }
 
 func (l LevelSettings) Name() string {
@@ -65,12 +66,13 @@ func GetLevel(level Level) LevelSettings {
 	switch level {
 	case Tutorial:
 		return LevelSettings{
-			Level:      Tutorial,
-			Width:      100,
-			Height:     20,
-			ThreatRate: 0.1,
-			MaxThreat:  50,
-			FPS:        2,
+			Level:          Tutorial,
+			Width:          100,
+			Height:         20,
+			ThreatDecay:    -0.03,
+			MovementThreat: 0.3,
+			MaxThreat:      50,
+			FPS:            2,
 			DataRequired: map[CellType]int{
 				CellTypeDelta: 1,
 			},
