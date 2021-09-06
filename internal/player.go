@@ -1,9 +1,5 @@
 package zen_doctor
 
-import (
-	"strings"
-)
-
 type Player struct {
 	Location  Coordinate
 	Threat    float32
@@ -20,26 +16,14 @@ func newPlayer(loc Coordinate) Player {
 	}
 }
 
-func (p *Player) tickThreat(rate float32) {
+func (p *Player) tickThreat(rate, max float32) {
 	p.Threat += rate
-}
-
-// ThreatMeter returns the formatted display string for the player's current threat.
-func (p *Player) ThreatMeter(size int) string {
-	b := strings.Builder{}
-	threat := int(p.Threat)
-	for i := 0; i < threat; i++ {
-		var color Color
-		if threat < size/3 {
-			color = Green
-		} else if threat < (size/3)+(size/3) {
-			color = Yellow
-		} else {
-			color = Red
-		}
-		b.WriteString(WithColor(color, FullBlockSymbol))
+	// clamp to reasonable values
+	if p.Threat < 0 {
+		p.Threat = 0
+	} else if p.Threat > max {
+		p.Threat = max
 	}
-	return b.String()
 }
 
 func (p *Player) isDetected(maxThreat int) bool {

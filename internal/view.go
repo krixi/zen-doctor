@@ -131,3 +131,26 @@ func (v *View) Apply(s *GameState) {
 		}
 	}
 }
+
+// ThreatMeter scales the string to fit inside the view correctly.
+// it assumes the meter is always the width of the view.
+func (v *View) ThreatMeter(current, max float32) string {
+	b := strings.Builder{}
+
+	// find the percent, convert that to an int over v.Width
+	percent := current / max
+	threat := int(percent * float32(v.Width))
+
+	for i := 0; i < threat; i++ {
+		var color Color
+		if threat < v.Width/3 {
+			color = Green
+		} else if threat < (v.Width/3)+(v.Width/3) {
+			color = Yellow
+		} else {
+			color = Red
+		}
+		b.WriteString(WithColor(color, FullBlockSymbol))
+	}
+	return b.String()
+}

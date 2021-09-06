@@ -66,7 +66,7 @@ func GetLevel(level Level) LevelSettings {
 	case Tutorial:
 		return LevelSettings{
 			Level:      Tutorial,
-			Width:      50,
+			Width:      100,
 			Height:     20,
 			ThreatRate: 0.1,
 			MaxThreat:  50,

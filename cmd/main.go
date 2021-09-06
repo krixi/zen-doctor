@@ -56,7 +56,6 @@ func layout(state *zen_doctor.GameState) func(g *gocui.Gui) error {
 		level := state.GetLevel()
 		x1, y1, x2, y2 := zen_doctor.CalculateViewPosition(level.Width, level.Height, maxX, maxY)
 
-		// TODO: fix the threat view.
 		if v, err := g.SetView(level.Name(), x1, y1, x2, y2); err != nil {
 			if err != gocui.ErrUnknownView {
 				return errors.Wrapf(err, "setting view for level %s", level.Name())

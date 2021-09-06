@@ -30,7 +30,7 @@ func (s *GameState) String() string {
 }
 
 func (s *GameState) ThreatMeter() string {
-	return s.player.ThreatMeter(s.GetLevel().MaxThreat)
+	return s.view.ThreatMeter(s.player.Threat, float32(s.GetLevel().MaxThreat))
 }
 
 func (s *GameState) TickBitStream() {
@@ -45,7 +45,7 @@ func (s *GameState) TickPlayer() {
 	defer s.mu.Unlock()
 
 	level := GetLevel(s.currentLevel)
-	s.player.tickThreat(level.ThreatRate)
+	s.player.tickThreat(level.ThreatRate, float32(level.MaxThreat))
 }
 
 func (s *GameState) Reset() {
