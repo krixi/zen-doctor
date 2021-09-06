@@ -10,7 +10,9 @@ type LevelSettings struct {
 	MovementThreat float32
 	MaxThreat      float32
 	FPS            int
-	DataRequired   map[CellType]int
+	ViewDistX      int
+	ViewDistY      int
+	DataRequired   map[LootType]int
 }
 
 func (l LevelSettings) Name() string {
@@ -73,8 +75,10 @@ func GetLevel(level Level) LevelSettings {
 			MovementThreat: 0.3,
 			MaxThreat:      50,
 			FPS:            2,
-			DataRequired: map[CellType]int{
-				CellTypeDelta: 1,
+			ViewDistX:      6,
+			ViewDistY:      3,
+			DataRequired: map[LootType]int{
+				LootTypeDelta: 1,
 			},
 		}
 	default:

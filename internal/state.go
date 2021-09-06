@@ -37,7 +37,7 @@ func (s *GameState) TickBitStream() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.world.shiftBitStream(0, 1)
+	s.world.shiftBitStream(MoveDown)
 }
 
 func (s *GameState) TickPlayer() {

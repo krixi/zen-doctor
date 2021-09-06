@@ -24,10 +24,60 @@ const (
 	Uncommon
 	Rare
 	Epic
+	Legendary
 )
 
-func (r Rarity) Of(msg string) string {
-	switch r {
+func getRarity() Rarity {
+	v := rand.Float32()
+	// TODO: make this loot table dynamic based on level difficulty
+	if v > 0.98 {
+		return Legendary
+	} else if v > 0.93 {
+		return Epic
+	} else if v > 0.75 {
+		return Rare
+	} else if v > 0.5 {
+		return Uncommon
+	} else if v > 0.2 {
+		return Common
+	} else {
+		return Junk
+	}
+}
+
+type LootType int
+
+const (
+	LootTypeEmpty LootType = iota
+	LootTypeDelta
+	LootTypeOmega
+	LootTypeSigma
+	LootTypeLambda
+)
+
+func (lt LootType) String() string {
+	switch lt {
+	case LootTypeDelta:
+		return DeltaSymbol
+	case LootTypeOmega:
+		return OmegaSymbol
+	case LootTypeSigma:
+		return SigmaSymbol
+	case LootTypeLambda:
+		return LambdaSymbol
+	default:
+		return " "
+	}
+}
+
+type Loot struct {
+	Type  LootType
+	Value Rarity
+}
+
+func (d Loot) String() string {
+	msg := d.Type.String()
+	switch d.Value {
 	case Junk:
 		return WithColor(LightGray, msg)
 	case Common:
@@ -38,119 +88,150 @@ func (r Rarity) Of(msg string) string {
 		return WithColor(Blue, msg)
 	case Epic:
 		return WithColor(Purple, msg)
+	case Legendary:
+		return WithColor(Orange, msg)
 	}
 	return msg
 }
 
-func getRarity() Rarity {
-	v := rand.Float32()
-	if v > 0.95 {
-		return Epic
-	} else if v > 0.8 {
-		return Rare
-	} else if v > 0.5 {
-		return Uncommon
-	} else if v > 0.1 {
-		return Common
-	} else {
-		return Junk
-	}
-}
-
-type CellType int
+type HiddenBitType int
 
 const (
-	CellTypeEmpty CellType = iota
-	CellTypeDelta
-	CellTypeOmega
-	CellTypeSigma
-	CellTypeLambda
+	BitTypeEmpty HiddenBitType = iota
+	BitTypeZero
+	BitTypeOne
 )
 
-func (ct CellType) String() string {
-	switch ct {
-	case CellTypeDelta:
-		return DeltaSymbol
-	case CellTypeOmega:
-		return OmegaSymbol
-	case CellTypeSigma:
-		return SigmaSymbol
-	case CellTypeLambda:
-		return LambdaSymbol
-	default:
-		return " "
+func (b HiddenBitType) String() string {
+	switch b {
+	case BitTypeZero:
+		return `0`
+	case BitTypeOne:
+		return `1`
 	}
+	return ` `
 }
 
-type Cell struct {
-	Type  CellType
-	Value Rarity
+type RevealedBitType int
+
+const (
+	RevealedBitBenign RevealedBitType = iota
+	RevealedBitHelpful
+	RevealedBitHarmful
+)
+
+type Bits struct {
+	Hidden   HiddenBitType
+	Revealed RevealedBitType
+	Value    Rarity
+	Symbol   string
 }
 
-func (c Cell) String() string {
-	return c.Value.Of(c.Type.String())
+func (b Bits) ViewHidden() string {
+	return b.Hidden.String()
+}
+func (b Bits) ViewRevealed() string {
+	return b.Symbol
+}
+
+var hiddenBits = []HiddenBitType{
+	BitTypeZero,
+	BitTypeOne,
+}
+var helpfulBits = []string{
+	ShrugSymbol,
+	PhiSymbol,
+	DiamondSymbol,
+}
+var harmfulBits = []string{
+	DaggerSymbol,
+	KoppaSymbol,
+	PsiSymbol,
+}
+
+// TODO: make this configurable based on level settings.
+func getBit() Bits {
+	hidden := BitTypeEmpty
+	revealed := RevealedBitBenign
+	rarity := Junk
+	symbol := " "
+	if rand.Float32() < 0.2 {
+		hidden = hiddenBits[rand.Intn(len(hiddenBits))]
+		symbol = hidden.String()
+		rarity = getRarity()
+		next := rand.Float32()
+		if next < 0.1 {
+			revealed = RevealedBitHarmful
+			symbol = harmfulBits[rand.Intn(len(harmfulBits))]
+		} else if next > 0.98 {
+			revealed = RevealedBitHelpful
+			symbol = helpfulBits[rand.Intn(len(helpfulBits))]
+		}
+	}
+	return Bits{hidden, revealed, rarity, symbol}
 }
 
 type World struct {
 	width     int
 	height    int
-	Grid      map[Coordinate]Cell
-	BitStream map[Coordinate]string
-}
-
-var choices = []string{
-	"0",
-	"1",
-}
-
-func getBit() string {
-	if rand.Float32() < 0.2 {
-		return choices[rand.Intn(len(choices))]
-	} else {
-		return " "
-	}
+	Loot      map[Coordinate]Loot
+	BitStream map[Coordinate]Bits
 }
 
 func newWorld(level LevelSettings) World {
 
-	bitStream := make(map[Coordinate]string)
-	grid := make(map[Coordinate]Cell)
+	bitStream := make(map[Coordinate]Bits)
+	loot := make(map[Coordinate]Loot)
 	for x := 0; x < level.Width; x++ {
 		for y := 0; y < level.Height; y++ {
 			c := Coordinate{x, y}
-			grid[c] = Cell{
-				Type: CellTypeEmpty,
+			loot[c] = Loot{
+				Type: LootTypeEmpty,
 			}
 			bitStream[c] = getBit()
 		}
 	}
 
-	for cellType, count := range level.DataRequired {
+	for dataType, count := range level.DataRequired {
 		filled := 0
 		for filled < count {
 			// make sure it's empty first
 			x := rand.Intn(level.Width - 1)
 			y := rand.Intn(level.Height - 1)
 			c := Coordinate{x, y}
-			if grid[c].Type == CellTypeEmpty {
-				grid[c] = Cell{cellType, getRarity()}
+			if loot[c].Type == LootTypeEmpty {
+				loot[c] = Loot{dataType, getRarity()}
 				filled++
 			}
 		}
 	}
 
-	return World{level.Width, level.Height, grid, bitStream}
+	return World{level.Width, level.Height, loot, bitStream}
 }
 
-func (w *World) shiftBitStream(x, y int) {
-	newStream := make(map[Coordinate]string)
-	// TODO: generate new bits
-	for coord, val := range w.BitStream {
-		c := Coordinate{
-			X: (coord.X + x) % w.width,
-			Y: (coord.Y + y) % w.height,
+func (w *World) shiftBitStream(dir Direction) {
+	newStream := make(map[Coordinate]Bits)
+
+	switch dir {
+	case MoveDown:
+		// update coordinates for all existing items in the stream
+		for coord, val := range w.BitStream {
+			c := Coordinate{
+				X: coord.X,
+				Y: coord.Y + 1,
+			}
+			if c.Y < w.height {
+				newStream[c] = val
+			}
 		}
-		newStream[c] = val
+		// Add a new row on top
+		for x := 0; x < w.width; x++ {
+			c := Coordinate{
+				X: x,
+				Y: 0,
+			}
+			newStream[c] = getBit()
+		}
 	}
 	w.BitStream = newStream
 }

@@ -1,18 +1,14 @@
 package zen_doctor
 
 type Player struct {
-	Location  Coordinate
-	Threat    float32
-	ViewDistX int
-	ViewDistY int
+	Location Coordinate
+	Threat   float32
 }
 
 func newPlayer(loc Coordinate) Player {
 	return Player{
-		Location:  loc,
-		Threat:    0,
-		ViewDistX: 4,
-		ViewDistY: 2,
+		Location: loc,
+		Threat:   0,
 	}
 }
 

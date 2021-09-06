@@ -26,6 +26,7 @@ const (
 	Red         Color = 1
 	YellowGreen Color = 190
 	Pink        Color = 200
+	Orange      Color = 208
 	Yellow      Color = 226
 	DarkGray    Color = 235
 	LightGray   Color = 245
@@ -72,9 +73,9 @@ func (v *View) String() string {
 
 // ApplyWorld populates the view with the data in the world.
 func (v *View) applyWorld(world World) {
-	for c, cell := range world.Grid {
+	for c, cell := range world.Loot {
 		switch cell.Type {
-		case CellTypeEmpty:
+		case LootTypeEmpty:
 			continue
 		default:
 			v.Data[c] = WithColor(White, QuestionSymbol)
@@ -85,7 +86,7 @@ func (v *View) applyWorld(world World) {
 // applyBitStream populates the view with the bit stream
 func (v *View) applyBitStream(world World) {
 	for c, bs := range world.BitStream {
-		v.Data[c] = WithColor(DarkGray, bs)
+		v.Data[c] = WithColor(DarkGray, bs.ViewHidden())
 	}
 }
 
@@ -102,8 +103,9 @@ func (v *View) Apply(s *GameState) {
 	v.Data[c] = WithColor(YellowGreen, PlayerSymbol)
 
 	// mask for view distance
-	vdx := s.player.ViewDistX
-	vdy := s.player.ViewDistY
+	level := s.GetLevel()
+	vdx := level.ViewDistX
+	vdy := level.ViewDistY
 	for x := c.X - vdx; x <= c.X+vdx; x++ {
 		for y := c.Y - vdy; y <= c.Y+vdy; y++ {
 
@@ -119,14 +121,22 @@ func (v *View) Apply(s *GameState) {
 			if x == c.X && y == c.Y {
 				continue
 			}
-			if s.world.Grid[offset].Type != CellTypeEmpty {
-				v.Data[offset] = WithBackground(DarkGray, s.world.Grid[offset].String())
+			if s.world.Loot[offset].Type != LootTypeEmpty {
+				v.Data[offset] = WithBackground(DarkGray, s.world.Loot[offset].String())
 				continue
 			}
 
-			// show the bit stream around them with a background
-			if s.world.BitStream[offset] != " " {
-				v.Data[offset] = WithBackground(DarkGray, WithColor(LightGray, s.world.BitStream[offset]))
+			// show the bit stream around them with a background and a color based on whether it's good or bad
+			bs := s.world.BitStream[offset]
+			if bs.Hidden != BitTypeEmpty {
+				color := LightGray
+				switch bs.Revealed {
+				case RevealedBitHelpful:
+					color = Green
+				case RevealedBitHarmful:
+					color = Red
+				}
+				v.Data[offset] = WithBackground(DarkGray, WithColor(color, bs.ViewRevealed()))
 			}
 		}
 	}
