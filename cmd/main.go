@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/jroimartin/gocui"
@@ -16,7 +17,9 @@ var (
 )
 
 const (
-	threatView = "threat"
+	threatView  = "threat"
+	lootingView = "looting"
+	itemsView   = "items"
 )
 
 func main() {
@@ -53,7 +56,7 @@ func main() {
 func layout(state *zen_doctor.GameState) func(g *gocui.Gui) error {
 	return func(g *gocui.Gui) error {
 		maxX, maxY := g.Size()
-		level := state.GetLevel()
+		level := state.Level()
 		x1, y1, x2, y2 := zen_doctor.CalculateViewPosition(level.Width, level.Height, maxX, maxY)
 
 		if v, err := g.SetView(level.Name(), x1, y1, x2, y2); err != nil {
@@ -69,6 +72,16 @@ func layout(state *zen_doctor.GameState) func(g *gocui.Gui) error {
 				return err
 			}
 			v.Title = "Threat"
+		}
+		if v, err := g.SetView(itemsView, x1-20, y1-3, x1-1, y2); err != nil {
+			if err != gocui.ErrUnknownView {
+				return err
+			}
+			v.Title = "Items"
+			renderInventory(v, state)
+		}
+		if err := lootMeter(g, state, x1, y1, x2, y2); err != nil {
+			return err
 		}
 
 		//if v, err := g.SetView("colors", 0, 0, maxX-1, maxY-1); err != nil {
@@ -92,9 +105,31 @@ func layout(state *zen_doctor.GameState) func(g *gocui.Gui) error {
 		return nil
 	}
 }
+func renderInventory(v *gocui.View, state *zen_doctor.GameState) {
+	v.Clear()
+	fmt.Fprintln(v, "Want:")
+	for want, qty := range state.Level().DataRequired {
+		fmt.Fprintf(v, "%dx %s\n", qty, want.String())
+	}
+	fmt.Fprintln(v, strings.Repeat("─", 19))
+	fmt.Fprintln(v, "Have:")
+	for _, have := range state.Inventory() {
+		fmt.Fprintln(v, have.String())
+	}
+}
+
+func lootMeter(g *gocui.Gui, state *zen_doctor.GameState, x1, y1, x2, y2 int) error {
+	if v, err := g.SetView(lootingView, x1, y2+1, x2, y2+3); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+		v.Title = "Looting Progress"
+	}
+	return nil
+}
 
 func gameKeybinds(g *gocui.Gui, state *zen_doctor.GameState) error {
-	level := state.GetLevel()
+	level := state.Level()
 	// in-game keybinds
 	if err := g.SetKeybinding(level.Name(), gocui.KeyArrowUp, gocui.ModNone, movePlayer(state, zen_doctor.MoveUp)); err != nil {
 		return err
@@ -142,7 +177,7 @@ func gameOver(g *gocui.Gui) error {
 }
 
 func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
-	level := state.GetLevel()
+	level := state.Level()
 
 	viewUpdate := time.NewTicker(time.Duration(1000/level.FPS) * time.Millisecond)
 	defer viewUpdate.Stop()
@@ -163,6 +198,14 @@ func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
 				if v, err := g.View(threatView); err == nil {
 					v.Clear()
 					fmt.Fprintf(v, "%s", state.ThreatMeter())
+				}
+				// loot view
+				if v, err := g.View(lootingView); err == nil {
+					v.Clear()
+					fmt.Fprintf(v, "%s", state.LootProgressMeter())
+				}
+				if v, err := g.View(itemsView); err == nil {
+					renderInventory(v, state)
 				}
 				if state.IsGameOver() {
 					done <- true

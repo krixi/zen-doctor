@@ -30,13 +30,13 @@ const (
 func getRarity() Rarity {
 	v := rand.Float32()
 	// TODO: make this loot table dynamic based on level difficulty
-	if v > 0.98 {
+	if v > 0.985 {
 		return Legendary
-	} else if v > 0.93 {
+	} else if v > 0.95 {
 		return Epic
-	} else if v > 0.75 {
+	} else if v > 0.7 {
 		return Rare
-	} else if v > 0.5 {
+	} else if v > 0.4 {
 		return Uncommon
 	} else if v > 0.2 {
 		return Common
@@ -160,7 +160,7 @@ var hiddenBits = []HiddenBitType{
 	BitTypeOne,
 }
 var helpfulBits = []string{
-	ShrugSymbol,
+	WeirdFRuneSymbol,
 	PhiSymbol,
 	DiamondSymbol,
 }
@@ -262,4 +262,19 @@ func (w *World) DidCollideWith(c Coordinate, bitType RevealedBitType) (float32, 
 		return b.Threat(), b.Revealed == bitType
 	}
 	return 0, false
+}
+
+func (w *World) DidCollideWithLoot(c Coordinate) bool {
+	if l, ok := w.Loot[c]; ok {
+		return l.Type != LootTypeEmpty
+	}
+	return false
+}
+
+func (w *World) ExtractLoot(c Coordinate) Loot {
+	if l, ok := w.Loot[c]; ok {
+		w.Loot[c] = Loot{Type: LootTypeEmpty}
+		return l
+	}
+	return Loot{Type: LootTypeEmpty}
 }

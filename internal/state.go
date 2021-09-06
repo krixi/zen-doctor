@@ -1,6 +1,8 @@
 package zen_doctor
 
-import "sync"
+import (
+	"sync"
+)
 
 type GameState struct {
 	currentLevel Level
@@ -30,7 +32,11 @@ func (s *GameState) String() string {
 }
 
 func (s *GameState) ThreatMeter() string {
-	return s.view.ThreatMeter(s.player.Threat, s.GetLevel().MaxThreat)
+	return s.view.ThreatMeter(s.player.Threat, s.Level().MaxThreat)
+}
+
+func (s *GameState) LootProgressMeter() string {
+	return s.view.LootProgressMeter(s.player.CurrentLoot.Progress, 100)
 }
 
 func (s *GameState) TickBitStream() {
@@ -43,7 +49,7 @@ func (s *GameState) TickBitStream() {
 
 // check for collisions with bad bits
 func (s *GameState) tickCollisions() {
-	level := s.GetLevel()
+	level := s.Level()
 
 	if threat, ok := s.world.DidCollideWith(s.player.Location, RevealedBitHelpful); ok {
 		// good bits
@@ -62,6 +68,19 @@ func (s *GameState) TickPlayer() {
 
 	level := GetLevel(s.currentLevel)
 	s.player.tickThreat(level.ThreatDecay, level.MaxThreat)
+
+	// handle player looting
+	if s.world.DidCollideWithLoot(s.player.Location) {
+		s.player.encounterLoot(s.player.Location)
+		s.player.tickLoot(level.LootSpeed)
+
+		// move loot to inventory once it's completely looted.
+		if s.player.CurrentLoot.IsComplete() {
+			s.player.CollectLoot(s.world.ExtractLoot(s.player.Location))
+		}
+	} else {
+		s.player.tickLoot(level.LootDecay)
+	}
 }
 
 func (s *GameState) Reset() {
@@ -77,8 +96,12 @@ func (s *GameState) IsGameOver() bool {
 	return s.player.isDetected(level.MaxThreat)
 }
 
-func (s *GameState) GetLevel() LevelSettings {
+func (s *GameState) Level() LevelSettings {
 	return GetLevel(s.currentLevel)
+}
+
+func (s *GameState) Inventory() []Loot {
+	return s.player.Inventory
 }
 
 func (s *GameState) MovePlayer(dir Direction) {
@@ -105,7 +128,7 @@ func (s *GameState) MovePlayer(dir Direction) {
 		}
 	}
 	s.player.Location = c
-	level := s.GetLevel()
+	level := s.Level()
 	s.player.tickThreat(level.MovementThreat, level.MaxThreat)
 	s.tickCollisions()
 }

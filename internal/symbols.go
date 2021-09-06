@@ -14,7 +14,7 @@ const (
 	ShchaSymbol         = `Щ`
 	DaggerSymbol        = `†`
 	ReferenceMarkSymbol = `※`
-	ShrugSymbol         = `ツ`
+	WeirdFRuneSymbol    = `ᚠ`
 	QuestionSymbol      = `?`
 	FullBlockSymbol     = `█`
 	CloverSymbol        = `⌘`

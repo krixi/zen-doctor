@@ -103,7 +103,7 @@ func (v *View) Apply(s *GameState) {
 	v.Data[c] = WithColor(YellowGreen, PlayerSymbol)
 
 	// mask for view distance
-	level := s.GetLevel()
+	level := s.Level()
 	vdx := level.ViewDistX
 	vdy := level.ViewDistY
 	for x := c.X - vdx; x <= c.X+vdx; x++ {
@@ -161,6 +161,20 @@ func (v *View) ThreatMeter(current, max float32) string {
 			color = Red
 		}
 		b.WriteString(WithColor(color, FullBlockSymbol))
+	}
+	return b.String()
+}
+
+func (v *View) LootProgressMeter(current, max float32) string {
+	b := strings.Builder{}
+	// find the percent, convert that to an int over v.Width
+	if current > max {
+		current = max
+	}
+	percent := current / max
+	progress := int(percent * float32(v.Width))
+	for i := 0; i < progress; i++ {
+		b.WriteString(WithColor(LightBlue, FullBlockSymbol))
 	}
 	return b.String()
 }

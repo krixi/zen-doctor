@@ -12,6 +12,8 @@ type LevelSettings struct {
 	FPS            int
 	ViewDistX      int
 	ViewDistY      int
+	LootSpeed      float32
+	LootDecay      float32
 	DataRequired   map[LootType]int
 }
 
@@ -77,6 +79,8 @@ func GetLevel(level Level) LevelSettings {
 			FPS:            2,
 			ViewDistX:      6,
 			ViewDistY:      3,
+			LootSpeed:      1,
+			LootDecay:      -0.3,
 			DataRequired: map[LootType]int{
 				LootTypeDelta: 1,
 			},
