@@ -27,18 +27,17 @@ const (
 	Legendary
 )
 
-func getRarity() Rarity {
+func getRarity(level LevelConfig) Rarity {
 	v := rand.Float32()
-	// TODO: make this loot table dynamic based on level difficulty
-	if v > 0.985 {
+	if v > (1 - level.LootChanceByRarity[Legendary]) {
 		return Legendary
-	} else if v > 0.95 {
+	} else if v > (1 - level.LootChanceByRarity[Epic]) {
 		return Epic
-	} else if v > 0.7 {
+	} else if v > (1 - level.LootChanceByRarity[Rare]) {
 		return Rare
-	} else if v > 0.4 {
+	} else if v > (1 - level.LootChanceByRarity[Uncommon]) {
 		return Uncommon
-	} else if v > 0.2 {
+	} else if v > (1 - level.LootChanceByRarity[Common]) {
 		return Common
 	} else {
 		return Junk
@@ -136,21 +135,9 @@ func (b Bits) ViewRevealed() string {
 
 // Threat returns the magnitude of the threat based on the value.
 // you still need to multiply by -1 if it's helpful
-func (b Bits) Threat() float32 {
-	// TODO: make this configurable based on the level
-	switch b.Value {
-	case Junk:
-		return 1
-	case Common:
-		return 2
-	case Uncommon:
-		return 3
-	case Rare:
-		return 5
-	case Epic:
-		return 8
-	case Legendary:
-		return 15
+func (b Bits) Threat(level LevelConfig) float32 {
+	if threat, ok := level.ThreatByRarity[b.Value]; ok {
+		return threat
 	}
 	return 0
 }
@@ -170,21 +157,20 @@ var harmfulBits = []string{
 	PsiSymbol,
 }
 
-// TODO: make this configurable based on level settings.
-func getBit() Bits {
+func getBit(level LevelConfig) Bits {
 	hidden := BitTypeEmpty
 	revealed := RevealedBitBenign
 	rarity := Junk
 	symbol := " "
-	if rand.Float32() < 0.2 {
+	if rand.Float32() < level.BitStreamChance {
 		hidden = hiddenBits[rand.Intn(len(hiddenBits))]
 		symbol = hidden.String()
-		rarity = getRarity()
+		rarity = getRarity(level)
 		next := rand.Float32()
-		if next < 0.1 {
+		if next < level.BadBitChance {
 			revealed = RevealedBitHarmful
 			symbol = harmfulBits[rand.Intn(len(harmfulBits))]
-		} else if next > 0.98 {
+		} else if next > (1 - level.GoodBitChance) {
 			revealed = RevealedBitHelpful
 			symbol = helpfulBits[rand.Intn(len(helpfulBits))]
 		}
@@ -193,13 +179,12 @@ func getBit() Bits {
 }
 
 type World struct {
-	width     int
-	height    int
+	Level     LevelConfig
 	Loot      map[Coordinate]Loot
 	BitStream map[Coordinate]Bits
 }
 
-func newWorld(level LevelSettings) World {
+func newWorld(level LevelConfig) World {
 
 	bitStream := make(map[Coordinate]Bits)
 	loot := make(map[Coordinate]Loot)
@@ -209,7 +194,7 @@ func newWorld(level LevelSettings) World {
 			loot[c] = Loot{
 				Type: LootTypeEmpty,
 			}
-			bitStream[c] = getBit()
+			bitStream[c] = getBit(level)
 		}
 	}
 
@@ -221,13 +206,13 @@ func newWorld(level LevelSettings) World {
 			y := rand.Intn(level.Height - 1)
 			c := Coordinate{x, y}
 			if loot[c].Type == LootTypeEmpty {
-				loot[c] = Loot{dataType, getRarity()}
+				loot[c] = Loot{dataType, getRarity(level)}
 				filled++
 			}
 		}
 	}
 
-	return World{level.Width, level.Height, loot, bitStream}
+	return World{level, loot, bitStream}
 }
 
 func (w *World) shiftBitStream(dir Direction) {
@@ -241,17 +226,17 @@ func (w *World) shiftBitStream(dir Direction) {
 				X: coord.X,
 				Y: coord.Y + 1,
 			}
-			if c.Y < w.height {
+			if c.Y < w.Level.Height {
 				newStream[c] = val
 			}
 		}
 		// Add a new row on top
-		for x := 0; x < w.width; x++ {
+		for x := 0; x < w.Level.Width; x++ {
 			c := Coordinate{
 				X: x,
 				Y: 0,
 			}
-			newStream[c] = getBit()
+			newStream[c] = getBit(w.Level)
 		}
 	}
 	w.BitStream = newStream
@@ -259,9 +244,16 @@ func (w *World) shiftBitStream(dir Direction) {
 
 func (w *World) DidCollideWith(c Coordinate, bitType RevealedBitType) (float32, bool) {
 	if b, ok := w.BitStream[c]; ok {
-		return b.Threat(), b.Revealed == bitType
+		return b.Threat(w.Level), b.Revealed == bitType
 	}
 	return 0, false
+}
+
+func (w *World) NeutralizeBit(c Coordinate) {
+	if b, ok := w.BitStream[c]; ok {
+		b.Revealed = RevealedBitBenign
+		w.BitStream[c] = b
+	}
 }
 
 func (w *World) DidCollideWithLoot(c Coordinate) bool {

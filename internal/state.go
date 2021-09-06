@@ -5,20 +5,20 @@ import (
 )
 
 type GameState struct {
-	currentLevel Level
-	player       Player
-	world        World
-	view         View
-	mu           sync.Mutex
+	level  LevelConfig
+	player Player
+	world  World
+	view   View
+	mu     sync.Mutex
 }
 
 func NewGameState(level Level) GameState {
 	l := GetLevel(level)
 	return GameState{
-		currentLevel: level,
-		world:        newWorld(l),
-		player:       newPlayer(Coordinate{0, 0}),
-		view:         newView(l.Width, l.Height),
+		level:  l,
+		world:  newWorld(l),
+		player: newPlayer(Coordinate{0, 0}),
+		view:   newView(l.Width, l.Height),
 	}
 }
 
@@ -47,39 +47,39 @@ func (s *GameState) TickBitStream() {
 	s.tickCollisions()
 }
 
-// check for collisions with bad bits
-func (s *GameState) tickCollisions() {
-	level := s.Level()
-
-	if threat, ok := s.world.DidCollideWith(s.player.Location, RevealedBitHelpful); ok {
-		// good bits
-		s.player.tickThreat(-1*threat, level.MaxThreat)
-	}
-
-	if threat, ok := s.world.DidCollideWith(s.player.Location, RevealedBitHarmful); ok {
-		// bad bits
-		s.player.tickThreat(threat, level.MaxThreat)
-	}
-}
-
 func (s *GameState) TickPlayer() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	level := GetLevel(s.currentLevel)
-	s.player.tickThreat(level.ThreatDecay, level.MaxThreat)
-
 	// handle player looting
 	if s.world.DidCollideWithLoot(s.player.Location) {
 		s.player.encounterLoot(s.player.Location)
-		s.player.tickLoot(level.LootSpeed)
+		s.player.tickLoot(s.level.LootSpeed)
 
 		// move loot to inventory once it's completely looted.
 		if s.player.CurrentLoot.IsComplete() {
 			s.player.CollectLoot(s.world.ExtractLoot(s.player.Location))
 		}
 	} else {
-		s.player.tickLoot(level.LootDecay)
+		s.player.tickLoot(s.level.LootDecay)
+
+		// don't decay threat while looting
+		s.player.tickThreat(s.level.ThreatDecay, s.level.MaxThreat)
+	}
+}
+
+// check for collisions with bad bits
+func (s *GameState) tickCollisions() {
+	// note: not wrapped in mutex since this is called from mutex protected calls already.
+	if threat, ok := s.world.DidCollideWith(s.player.Location, RevealedBitHelpful); ok {
+		// good bits
+		s.player.tickThreat(-1*threat, s.level.MaxThreat)
+		s.world.NeutralizeBit(s.player.Location)
+	}
+
+	if threat, ok := s.world.DidCollideWith(s.player.Location, RevealedBitHarmful); ok {
+		// bad bits
+		s.player.tickThreat(threat, s.level.MaxThreat)
 	}
 }
 
@@ -92,12 +92,11 @@ func (s *GameState) Reset() {
 }
 
 func (s *GameState) IsGameOver() bool {
-	level := GetLevel(s.currentLevel)
-	return s.player.isDetected(level.MaxThreat)
+	return s.player.isDetected(s.level.MaxThreat)
 }
 
-func (s *GameState) Level() LevelSettings {
-	return GetLevel(s.currentLevel)
+func (s *GameState) Level() LevelConfig {
+	return s.level
 }
 
 func (s *GameState) Inventory() []Loot {
@@ -115,7 +114,7 @@ func (s *GameState) MovePlayer(dir Direction) {
 			c.Y--
 		}
 	case MoveDown:
-		if c.Y+1 < s.world.height-1 {
+		if c.Y+1 < s.level.Height-1 {
 			c.Y++
 		}
 	case MoveLeft:
@@ -123,7 +122,7 @@ func (s *GameState) MovePlayer(dir Direction) {
 			c.X--
 		}
 	case MoveRight:
-		if c.X+1 < s.world.width-1 {
+		if c.X+1 < s.level.Width-1 {
 			c.X++
 		}
 	}

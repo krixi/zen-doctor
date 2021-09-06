@@ -78,6 +78,7 @@ func layout(state *zen_doctor.GameState) func(g *gocui.Gui) error {
 				return err
 			}
 			v.Title = "Items"
+			v.Wrap = true
 			renderInventory(v, state)
 		}
 		if err := lootMeter(g, state, x1, y1, x2, y2); err != nil {
@@ -111,11 +112,13 @@ func renderInventory(v *gocui.View, state *zen_doctor.GameState) {
 	for want, qty := range state.Level().DataRequired {
 		fmt.Fprintf(v, "%dx %s\n", qty, want.String())
 	}
-	fmt.Fprintln(v, strings.Repeat("─", 19))
+	fmt.Fprintf(v, strings.Repeat("─", 18))
 	fmt.Fprintln(v, "Have:")
+	b := strings.Builder{}
 	for _, have := range state.Inventory() {
-		fmt.Fprintln(v, have.String())
+		b.WriteString(have.String())
 	}
+	fmt.Fprintln(v, b.String())
 }
 
 func lootMeter(g *gocui.Gui, state *zen_doctor.GameState, x1, y1, x2, y2 int) error {

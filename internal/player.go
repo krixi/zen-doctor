@@ -1,5 +1,7 @@
 package zen_doctor
 
+import "sort"
+
 type Player struct {
 	Location    Coordinate
 	Threat      float32
@@ -63,6 +65,9 @@ func (p *Player) isDetected(maxThreat float32) bool {
 func (p *Player) CollectLoot(loot Loot) {
 	if loot.Type != LootTypeEmpty {
 		p.Inventory = append(p.Inventory, loot)
+		sort.Slice(p.Inventory, func(i, j int) bool {
+			return p.Inventory[i].Value > p.Inventory[j].Value
+		})
 		p.CurrentLoot.Progress = 0
 	}
 }
