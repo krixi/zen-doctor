@@ -17,6 +17,7 @@ const (
 	ShrugSymbol         = "ツ"
 	QuestionSymbol      = "?"
 	FullBlockSymbol     = "█"
+	CloverSymbol        = "⌘"
 )
 
 var Symbols = []string{

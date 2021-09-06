@@ -33,7 +33,7 @@ const (
 )
 
 func GameOver() string {
-	return WithColor(Red, "Your hack has been detected! GAME OVER")
+	return WithColor(Red, "Your hack has been detected!")
 }
 
 func WithColor(color Color, msg string) string {
