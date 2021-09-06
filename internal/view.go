@@ -23,7 +23,7 @@ const (
 	Purple      Color = 129
 	Brown       Color = 130
 	Lavender    Color = 147
-	Red         Color = 160
+	Red         Color = 1
 	YellowGreen Color = 190
 	Pink        Color = 200
 	Yellow      Color = 226
@@ -31,6 +31,10 @@ const (
 	LightGray   Color = 245
 	White       Color = 255
 )
+
+func GameOver() string {
+	return WithColor(Red, "Your hack has been detected! GAME OVER")
+}
 
 func WithColor(color Color, msg string) string {
 	return fmt.Sprintf("\x1b[38;5;%dm%s\x1b[0m", int(color), msg)
@@ -88,18 +92,18 @@ func (v *View) applyBitStream(world World) {
 // Apply updates the view from the state.
 func (v *View) Apply(s *GameState) {
 	// First is the bit stream
-	v.applyBitStream(s.World)
+	v.applyBitStream(s.world)
 
 	// Then is the world.
-	v.applyWorld(s.World)
+	v.applyWorld(s.world)
 
 	// Then finally, the player
-	c := s.Player.Location
+	c := s.player.Location
 	v.Data[c] = WithColor(YellowGreen, PlayerSymbol)
 
 	// mask for view distance
-	vdx := s.Player.ViewDistX
-	vdy := s.Player.ViewDistY
+	vdx := s.player.ViewDistX
+	vdy := s.player.ViewDistY
 	for x := c.X - vdx; x <= c.X+vdx; x++ {
 		for y := c.Y - vdy; y <= c.Y+vdy; y++ {
 
@@ -115,14 +119,14 @@ func (v *View) Apply(s *GameState) {
 			if x == c.X && y == c.Y {
 				continue
 			}
-			if s.World.Grid[offset].Type != CellTypeEmpty {
-				v.Data[offset] = WithBackground(DarkGray, s.World.Grid[offset].String())
+			if s.world.Grid[offset].Type != CellTypeEmpty {
+				v.Data[offset] = WithBackground(DarkGray, s.world.Grid[offset].String())
 				continue
 			}
 
 			// show the bit stream around them with a background
-			if s.World.BitStream[offset] != " " {
-				v.Data[offset] = WithBackground(DarkGray, WithColor(LightGray, s.World.BitStream[offset]))
+			if s.world.BitStream[offset] != " " {
+				v.Data[offset] = WithBackground(DarkGray, WithColor(LightGray, s.world.BitStream[offset]))
 			}
 		}
 	}

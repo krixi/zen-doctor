@@ -16,7 +16,11 @@ var (
 	selectedLevel = zen_doctor.Tutorial
 )
 
-const menuView = "menu"
+const (
+	menuView       = "menu"
+	threatView     = "threat"
+	threatViewSize = 50
+)
 
 func main() {
 	rand.Seed(time.Now().Unix())
@@ -60,9 +64,19 @@ func layout(g *gocui.Gui) error {
 			return err
 		}
 		v.Title = "Help"
-		fmt.Fprintln(v, "Keys")
+		v.Wrap = true
+		fmt.Fprintln(v, "Keys:")
 		fmt.Fprintln(v, "← ↑ → ↓: Move")
 		fmt.Fprintln(v, "^C:      Exit")
+		fmt.Fprintln(v, "Objective:")
+		fmt.Fprintln(v, "Find required data,\nthen move to exit.")
+	}
+
+	if v, err := g.SetView(threatView, 0, 0, threatViewSize, 2); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+		v.Title = "Threat"
 	}
 	return nil
 }
@@ -76,8 +90,8 @@ func renderMenu(v *gocui.View) {
 			fmt.Fprintf(v, "  %s\n", level.String())
 		}
 	}
-	//// 256-colors escape codes
-	//for i := 100; i < 256; i++ {
+	// 256-colors escape codes
+	//for i := 0; i < 256; i++ {
 	//	str := fmt.Sprintf("\x1b[48;5;%dm\x1b[30m%3d\x1b[0m ", i, i)
 	//	str += fmt.Sprintf("\x1b[38;5;%dm%3d\x1b[0m ", i, i)
 	//
@@ -139,7 +153,8 @@ func loadGame(g *gocui.Gui, v *gocui.View) error {
 	}
 	levelView.Title = level.Name()
 
-	go gameLoop(g, selectedLevel)
+	state := zen_doctor.NewGameState(selectedLevel)
+	go gameLoop(g, &state)
 	return nil
 }
 
@@ -149,7 +164,7 @@ func quit(_ *gocui.Gui, _ *gocui.View) error {
 }
 
 // callback hell :notlikethis:
-func endGame(level zen_doctor.LevelSettings) func(g *gocui.Gui, _ *gocui.View) error {
+func endGame(state *zen_doctor.GameState) func(g *gocui.Gui, _ *gocui.View) error {
 	return func(g *gocui.Gui, _ *gocui.View) error {
 		g.Update(func(g *gocui.Gui) error {
 			// go back to menu view
@@ -159,8 +174,15 @@ func endGame(level zen_doctor.LevelSettings) func(g *gocui.Gui, _ *gocui.View) e
 			done <- true
 
 			// delete the data for the level
+			level := state.GetLevel()
 			g.DeleteView(level.Name())
 			g.DeleteKeybindings(level.Name())
+			state.Reset()
+
+			// reset threat meter view
+			if v, err := g.View(threatView); err == nil {
+				v.Clear()
+			}
 			return nil
 		})
 		return nil
@@ -176,29 +198,27 @@ func movePlayer(state *zen_doctor.GameState, dir zen_doctor.Direction) func(g *g
 	}
 }
 
-func gameLoop(g *gocui.Gui, lvl zen_doctor.Level) {
-
-	state := zen_doctor.NewGameState(lvl)
-	level := zen_doctor.GetLevel(state.CurrentLevel)
+func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
+	level := state.GetLevel()
 
 	ticker := time.NewTicker(time.Duration(1000/level.FPS) * time.Millisecond)
 	defer ticker.Stop()
 
 	g.Update(func(g *gocui.Gui) error {
 		// in-game keybinds
-		if err := g.SetKeybinding(level.Name(), gocui.KeyCtrlC, gocui.ModNone, endGame(level)); err != nil {
+		if err := g.SetKeybinding(level.Name(), gocui.KeyCtrlC, gocui.ModNone, endGame(state)); err != nil {
 			return err
 		}
-		if err := g.SetKeybinding(level.Name(), gocui.KeyArrowUp, gocui.ModNone, movePlayer(&state, zen_doctor.MoveUp)); err != nil {
+		if err := g.SetKeybinding(level.Name(), gocui.KeyArrowUp, gocui.ModNone, movePlayer(state, zen_doctor.MoveUp)); err != nil {
 			return err
 		}
-		if err := g.SetKeybinding(level.Name(), gocui.KeyArrowDown, gocui.ModNone, movePlayer(&state, zen_doctor.MoveDown)); err != nil {
+		if err := g.SetKeybinding(level.Name(), gocui.KeyArrowDown, gocui.ModNone, movePlayer(state, zen_doctor.MoveDown)); err != nil {
 			return err
 		}
-		if err := g.SetKeybinding(level.Name(), gocui.KeyArrowLeft, gocui.ModNone, movePlayer(&state, zen_doctor.MoveLeft)); err != nil {
+		if err := g.SetKeybinding(level.Name(), gocui.KeyArrowLeft, gocui.ModNone, movePlayer(state, zen_doctor.MoveLeft)); err != nil {
 			return err
 		}
-		if err := g.SetKeybinding(level.Name(), gocui.KeyArrowRight, gocui.ModNone, movePlayer(&state, zen_doctor.MoveRight)); err != nil {
+		if err := g.SetKeybinding(level.Name(), gocui.KeyArrowRight, gocui.ModNone, movePlayer(state, zen_doctor.MoveRight)); err != nil {
 			return err
 		}
 		v, err := g.SetCurrentView(level.Name())
@@ -214,17 +234,37 @@ func gameLoop(g *gocui.Gui, lvl zen_doctor.Level) {
 		select {
 		case <-done:
 			return
+
+		// player threat is separate from game state
+		case <-time.After((1000 / 30) * time.Millisecond):
+			state.TickPlayer()
+			g.Update(func(g *gocui.Gui) error {
+				// threat view
+				if v, err := g.View(threatView); err == nil {
+					v.Clear()
+					fmt.Fprintf(v, "%s", state.ThreatMeter(threatViewSize))
+				}
+				if state.IsGameOver() {
+					ticker.Stop()
+					if v, err := g.View(level.Name()); err == nil {
+						v.Clear() // TODO: i dunno how to leave the screen and also show this game over message. Maybe a new view?
+						fmt.Fprintf(v, "%s", zen_doctor.GameOver())
+					}
+				}
+				return nil
+			})
+
 		case <-ticker.C:
 			// game tick
-			g.Update(func(g *gocui.Gui) error {
-				v, err := g.View(level.Name())
-				if err != nil {
-					return err
-				}
-				v.Clear()
-				state.Tick()
-				fmt.Fprintf(v, "%s", state.String())
+			state.TickBitStream()
 
+			// update the views
+			g.Update(func(g *gocui.Gui) error {
+				// main game view
+				if v, err := g.View(level.Name()); err == nil {
+					v.Clear()
+					fmt.Fprintf(v, "%s", state.String())
+				}
 				return nil
 			})
 		}

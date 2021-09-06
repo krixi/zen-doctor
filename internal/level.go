@@ -7,6 +7,7 @@ type LevelSettings struct {
 	Width        int
 	Height       int
 	ThreatRate   float32
+	MaxThreat    int
 	FPS          int
 	DataRequired map[CellType]int
 }
@@ -67,7 +68,8 @@ func GetLevel(level Level) LevelSettings {
 			Level:      Tutorial,
 			Width:      50,
 			Height:     20,
-			ThreatRate: 0.01,
+			ThreatRate: 0.1,
+			MaxThreat:  50,
 			FPS:        2,
 			DataRequired: map[CellType]int{
 				CellTypeDelta: 1,

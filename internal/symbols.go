@@ -16,6 +16,7 @@ const (
 	ReferenceMarkSymbol = "※"
 	ShrugSymbol         = "ツ"
 	QuestionSymbol      = "?"
+	FullBlockSymbol     = "█"
 )
 
 var Symbols = []string{
