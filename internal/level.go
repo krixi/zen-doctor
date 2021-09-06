@@ -43,7 +43,7 @@ func (l Level) IsValid() bool {
 func (l Level) String() string {
 	switch l {
 	case Tutorial:
-		return "Tutorial"
+		return "Level 0: Tutorial"
 	case Level1:
 		return "Level 1"
 	case Level2:

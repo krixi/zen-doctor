@@ -29,8 +29,8 @@ func (s *GameState) String() string {
 	return s.view.String()
 }
 
-func (s *GameState) ThreatMeter(size int) string {
-	return s.player.ThreatMeter(size)
+func (s *GameState) ThreatMeter() string {
+	return s.player.ThreatMeter(s.GetLevel().MaxThreat)
 }
 
 func (s *GameState) TickBitStream() {

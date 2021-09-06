@@ -16,8 +16,7 @@ var (
 )
 
 const (
-	threatView     = "threat"
-	threatViewSize = 50
+	threatView = "threat"
 )
 
 func main() {
@@ -28,81 +27,71 @@ func main() {
 	}
 	defer g.Close()
 
+	state := zen_doctor.NewGameState(zen_doctor.Tutorial)
+
 	g.Highlight = true
 	g.SelFgColor = gocui.ColorGreen
-	g.SetManagerFunc(layout)
-
-	if err := loadGame(g, zen_doctor.Tutorial); err != nil {
-		log.Panicln(err)
-	}
+	g.SetManagerFunc(layout(&state))
 
 	// global ket to quit
 	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
 	}
+	// game-specific keybinds
+	if err := gameKeybinds(g, &state); err != nil {
+		log.Panicln(err)
+	}
+	// start the game loop
+	go gameLoop(g, &state)
 
+	// start the terminal display loop
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
 }
 
-func layout(g *gocui.Gui) error {
-
-	if v, err := g.SetView(threatView, 0, 0, threatViewSize, 2); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-		v.Title = "Threat"
-	}
-
-	//if v, err := g.SetView("colors", 0, 0, maxX-1, maxY-1); err != nil {
-	//	if err != gocui.ErrUnknownView {
-	//		return err
-	//	}
-	//	// 256-colors escape codes
-	//	for i := 0; i < 256; i++ {
-	//		str := fmt.Sprintf("\x1b[48;5;%dm\x1b[30m%3d\x1b[0m ", i, i)
-	//		str += fmt.Sprintf("\x1b[38;5;%dm%3d\x1b[0m ", i, i)
-	//
-	//		if (i+1)%10 == 0 {
-	//			str += "\n"
-	//		}
-	//
-	//		fmt.Fprint(v, str)
-	//	}
-	//
-	//	fmt.Fprint(v, "\n\n")
-	//}
-	return nil
-}
-
-func loadGame(g *gocui.Gui, selectedLevel zen_doctor.Level) error {
-	level := zen_doctor.GetLevel(selectedLevel)
-	if !level.IsValid() {
-		return errors.Errorf("level %s is not implemented yet :(", level.Name())
-	}
-	state := zen_doctor.NewGameState(selectedLevel)
-
-	// becasue we're outside of the layout manager, need to use g.Update
-	g.Update(func(g *gocui.Gui) error {
+func layout(state *zen_doctor.GameState) func(g *gocui.Gui) error {
+	return func(g *gocui.Gui) error {
 		maxX, maxY := g.Size()
+		level := state.GetLevel()
 		x1, y1, x2, y2 := zen_doctor.CalculateViewPosition(level.Width, level.Height, maxX, maxY)
-		v, err := g.SetView(level.Name(), x1, y1, x2, y2)
-		if err != nil && err != gocui.ErrUnknownView {
-			return errors.Wrapf(err, "setting view for level %s", level.Name())
+
+		// TODO: fix the threat view.
+		if v, err := g.SetView(level.Name(), x1, y1, x2, y2); err != nil {
+			if err != gocui.ErrUnknownView {
+				return errors.Wrapf(err, "setting view for level %s", level.Name())
+			}
+			v.Title = level.Name()
+			fmt.Fprintf(v, "%s", state.String())
+			g.SetCurrentView(level.Name())
 		}
-		v.Title = level.Name()
-		fmt.Fprintf(v, "%s", state.String())
-		g.SetCurrentView(level.Name())
+		if v, err := g.SetView(threatView, x1, y1-3, x2, y1-1); err != nil {
+			if err != gocui.ErrUnknownView {
+				return err
+			}
+			v.Title = "Threat"
+		}
+
+		//if v, err := g.SetView("colors", 0, 0, maxX-1, maxY-1); err != nil {
+		//	if err != gocui.ErrUnknownView {
+		//		return err
+		//	}
+		//	// 256-colors escape codes
+		//	for i := 0; i < 256; i++ {
+		//		str := fmt.Sprintf("\x1b[48;5;%dm\x1b[30m%3d\x1b[0m ", i, i)
+		//		str += fmt.Sprintf("\x1b[38;5;%dm%3d\x1b[0m ", i, i)
+		//
+		//		if (i+1)%10 == 0 {
+		//			str += "\n"
+		//		}
+		//
+		//		fmt.Fprint(v, str)
+		//	}
+		//
+		//	fmt.Fprint(v, "\n\n")
+		//}
 		return nil
-	})
-
-	if err := gameKeybinds(g, &state); err != nil {
-		return err
 	}
-
-	go gameLoop(g, &state)
-	return nil
 }
 
 func gameKeybinds(g *gocui.Gui, state *zen_doctor.GameState) error {
@@ -174,7 +163,7 @@ func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
 				// threat view
 				if v, err := g.View(threatView); err == nil {
 					v.Clear()
-					fmt.Fprintf(v, "%s", state.ThreatMeter(threatViewSize))
+					fmt.Fprintf(v, "%s", state.ThreatMeter())
 				}
 				if state.IsGameOver() {
 					done <- true
