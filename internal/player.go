@@ -3,10 +3,11 @@ package zen_doctor
 import "sort"
 
 type Player struct {
-	Location    Coordinate
-	Threat      float32
-	Inventory   []Loot
-	CurrentLoot looting
+	Location      Coordinate
+	Threat        float32
+	Inventory     []Loot
+	CurrentLoot   looting
+	DataCollected map[LootType]float32
 }
 
 // holds data about a looting in progress
@@ -37,8 +38,9 @@ func (l *looting) IsComplete() bool {
 
 func newPlayer(loc Coordinate) Player {
 	return Player{
-		Location: loc,
-		Threat:   0,
+		Location:      loc,
+		Threat:        0,
+		DataCollected: map[LootType]float32{},
 	}
 }
 
@@ -66,8 +68,13 @@ func (p *Player) CollectLoot(loot Loot) {
 	if loot.Type != LootTypeEmpty {
 		p.Inventory = append(p.Inventory, loot)
 		sort.Slice(p.Inventory, func(i, j int) bool {
-			return p.Inventory[i].Value > p.Inventory[j].Value
+			return p.Inventory[i].Rarity > p.Inventory[j].Rarity
 		})
+		if val, ok := p.DataCollected[loot.Type]; ok {
+			p.DataCollected[loot.Type] = val + loot.Data
+		} else {
+			p.DataCollected[loot.Type] = loot.Data
+		}
 		p.CurrentLoot.Progress = 0
 	}
 }

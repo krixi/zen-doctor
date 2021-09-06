@@ -72,31 +72,32 @@ func (v *View) String() string {
 }
 
 // ApplyWorld populates the view with the data in the world.
-func (v *View) applyWorld(world World) {
-	for c, cell := range world.Loot {
-		switch cell.Type {
+func (v *View) applyWorld(world *World) {
+	for c, loot := range world.Loot {
+		switch loot.Type {
 		case LootTypeEmpty:
 			continue
 		default:
-			v.Data[c] = WithColor(White, QuestionSymbol)
+			v.Data[c] = loot.WithIntegrity(QuestionSymbol)
 		}
 	}
 }
 
 // applyBitStream populates the view with the bit stream
-func (v *View) applyBitStream(world World) {
+func (v *View) applyBitStream(world *World) {
 	for c, bs := range world.BitStream {
 		v.Data[c] = WithColor(DarkGray, bs.ViewHidden())
 	}
 }
 
 // Apply updates the view from the state.
+// We want to assemble a string that represents the final game state for this frame, so we do it in layers.
 func (v *View) Apply(s *GameState) {
 	// First is the bit stream
-	v.applyBitStream(s.world)
+	v.applyBitStream(&s.world)
 
 	// Then is the world.
-	v.applyWorld(s.world)
+	v.applyWorld(&s.world)
 
 	// Then finally, the player
 	c := s.player.Location
@@ -121,8 +122,9 @@ func (v *View) Apply(s *GameState) {
 			if x == c.X && y == c.Y {
 				continue
 			}
-			if s.world.Loot[offset].Type != LootTypeEmpty {
-				v.Data[offset] = WithBackground(DarkGray, s.world.Loot[offset].String())
+			loot := s.world.Loot[offset]
+			if loot.Type != LootTypeEmpty {
+				v.Data[offset] = WithBackground(DarkGray, loot.String())
 				continue
 			}
 
@@ -175,6 +177,29 @@ func (v *View) LootProgressMeter(current, max float32) string {
 	progress := int(percent * float32(v.Width))
 	for i := 0; i < progress; i++ {
 		b.WriteString(WithColor(LightBlue, FullBlockSymbol))
+	}
+	return b.String()
+}
+
+func (v *View) DataWanted(state *GameState) string {
+	b := strings.Builder{}
+	for _, want := range state.Level().WinConditions {
+		b.WriteString(fmt.Sprintf("%s %.0f\n", want.Type.String(), want.Amount))
+	}
+	return b.String()
+}
+
+func (v *View) DataCollected(state *GameState) string {
+	b := strings.Builder{}
+	for _, want := range state.level.WinConditions {
+		if amount, ok := state.player.DataCollected[want.Type]; ok {
+			b.WriteString(fmt.Sprintf("%s %.0f\n", want.Type.String(), amount))
+		}
+	}
+	for _, want := range state.level.Bonus {
+		if amount, ok := state.player.DataCollected[want]; ok {
+			b.WriteString(fmt.Sprintf("%s %.0f\n", want.String(), amount))
+		}
 	}
 	return b.String()
 }

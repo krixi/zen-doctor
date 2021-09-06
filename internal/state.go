@@ -22,7 +22,6 @@ func NewGameState(level Level) GameState {
 	}
 }
 
-// We want to assemble a string that represents the final game state for this frame, so we do it in layers.
 func (s *GameState) String() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -37,6 +36,13 @@ func (s *GameState) ThreatMeter() string {
 
 func (s *GameState) LootProgressMeter() string {
 	return s.view.LootProgressMeter(s.player.CurrentLoot.Progress, 100)
+}
+
+func (s *GameState) TickWorld() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.world.TickLoot()
 }
 
 func (s *GameState) TickBitStream() {
@@ -61,7 +67,7 @@ func (s *GameState) TickPlayer() {
 			s.player.CollectLoot(s.world.ExtractLoot(s.player.Location))
 		}
 	} else {
-		s.player.tickLoot(s.level.LootDecay)
+		s.player.tickLoot(s.level.LootSpeedDecay)
 
 		// don't decay threat while looting
 		s.player.tickThreat(s.level.ThreatDecay, s.level.MaxThreat)
@@ -101,6 +107,14 @@ func (s *GameState) Level() LevelConfig {
 
 func (s *GameState) Inventory() []Loot {
 	return s.player.Inventory
+}
+
+func (s *GameState) DataWanted() string {
+	return s.view.DataWanted(s)
+}
+
+func (s *GameState) DataCollected() string {
+	return s.view.DataCollected(s)
 }
 
 func (s *GameState) MovePlayer(dir Direction) {

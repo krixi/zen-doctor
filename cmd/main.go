@@ -109,11 +109,12 @@ func layout(state *zen_doctor.GameState) func(g *gocui.Gui) error {
 func renderInventory(v *gocui.View, state *zen_doctor.GameState) {
 	v.Clear()
 	fmt.Fprintln(v, "Want:")
-	for want, qty := range state.Level().DataRequired {
-		fmt.Fprintf(v, "%dx %s\n", qty, want.String())
-	}
+	fmt.Fprintf(v, state.DataWanted())
 	fmt.Fprintf(v, strings.Repeat("─", 18))
 	fmt.Fprintln(v, "Have:")
+	fmt.Fprintln(v, state.DataCollected())
+	fmt.Fprintf(v, strings.Repeat("─", 18))
+	fmt.Fprintln(v, "Collected:")
 	b := strings.Builder{}
 	for _, have := range state.Inventory() {
 		b.WriteString(have.String())
@@ -133,17 +134,36 @@ func lootMeter(g *gocui.Gui, state *zen_doctor.GameState, x1, y1, x2, y2 int) er
 
 func gameKeybinds(g *gocui.Gui, state *zen_doctor.GameState) error {
 	level := state.Level()
-	// in-game keybinds
+	// in-game keybinds:
+	// up
 	if err := g.SetKeybinding(level.Name(), gocui.KeyArrowUp, gocui.ModNone, movePlayer(state, zen_doctor.MoveUp)); err != nil {
 		return err
 	}
+	if err := g.SetKeybinding(level.Name(), 'w', gocui.ModNone, movePlayer(state, zen_doctor.MoveUp)); err != nil {
+		return err
+	}
+
+	// down
 	if err := g.SetKeybinding(level.Name(), gocui.KeyArrowDown, gocui.ModNone, movePlayer(state, zen_doctor.MoveDown)); err != nil {
 		return err
 	}
+	if err := g.SetKeybinding(level.Name(), 's', gocui.ModNone, movePlayer(state, zen_doctor.MoveDown)); err != nil {
+		return err
+	}
+
+	// left
 	if err := g.SetKeybinding(level.Name(), gocui.KeyArrowLeft, gocui.ModNone, movePlayer(state, zen_doctor.MoveLeft)); err != nil {
 		return err
 	}
+	if err := g.SetKeybinding(level.Name(), 'a', gocui.ModNone, movePlayer(state, zen_doctor.MoveLeft)); err != nil {
+		return err
+	}
+
+	// right
 	if err := g.SetKeybinding(level.Name(), gocui.KeyArrowRight, gocui.ModNone, movePlayer(state, zen_doctor.MoveRight)); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding(level.Name(), 'd', gocui.ModNone, movePlayer(state, zen_doctor.MoveRight)); err != nil {
 		return err
 	}
 	return nil
@@ -195,6 +215,7 @@ func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
 
 		// Fixed update
 		case <-fixedUpdate.C:
+			state.TickWorld()
 			state.TickPlayer()
 			g.Update(func(g *gocui.Gui) error {
 				// threat view

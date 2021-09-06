@@ -69,14 +69,46 @@ func (lt LootType) String() string {
 	}
 }
 
-type Loot struct {
-	Type  LootType
-	Value Rarity
+func getLootType(level LevelConfig) LootType {
+
+	checker := func(lootType LootType) bool {
+		if _, ok := level.LootTable[lootType]; !ok {
+			return false
+		}
+		return rand.Float32() > level.LootTable[lootType]
+	}
+
+	types := []LootType{LootTypeDelta, LootTypeLambda, LootTypeSigma, LootTypeOmega}
+	for _, t := range types {
+		if checker(t) {
+			return t
+		}
+	}
+	return level.DefaultLootType
 }
 
-func (d Loot) String() string {
-	msg := d.Type.String()
-	switch d.Value {
+type Loot struct {
+	Type      LootType
+	Rarity    Rarity
+	Data      float32
+	Integrity float32 // set to 1 initially, when it hits 0, the loot becomes worthless.
+}
+
+func newLoot(level LevelConfig) Loot {
+	lootType := getLootType(level)
+	rarity := getRarity(level)
+	data := level.DataByRarity[rarity] * level.DataMultipliers[lootType]
+	return Loot{
+		Type:      lootType,
+		Rarity:    rarity,
+		Data:      data,
+		Integrity: 1,
+	}
+}
+
+func (l *Loot) String() string {
+	msg := l.Type.String()
+	switch l.Rarity {
 	case Junk:
 		return WithColor(LightGray, msg)
 	case Common:
@@ -91,6 +123,25 @@ func (d Loot) String() string {
 		return WithColor(Orange, msg)
 	}
 	return msg
+}
+
+func (l *Loot) tick(rate float32) {
+	l.Integrity += rate
+	if l.Integrity < 0 {
+		l.Data = 0
+		l.Rarity = Junk
+		l.Type = LootTypeEmpty
+	}
+}
+
+func (l *Loot) WithIntegrity(msg string) string {
+	if l.Integrity > 0.33 {
+		return WithColor(White, msg)
+	}
+	if l.Integrity > 0.15 {
+		return WithColor(Yellow, msg)
+	}
+	return WithColor(Red, msg)
 }
 
 type HiddenBitType int
@@ -179,9 +230,10 @@ func getBit(level LevelConfig) Bits {
 }
 
 type World struct {
-	Level     LevelConfig
-	Loot      map[Coordinate]Loot
-	BitStream map[Coordinate]Bits
+	Level             LevelConfig
+	Loot              map[Coordinate]Loot
+	BitStream         map[Coordinate]Bits
+	LootSpawnProgress float32
 }
 
 func newWorld(level LevelConfig) World {
@@ -191,28 +243,13 @@ func newWorld(level LevelConfig) World {
 	for x := 0; x < level.Width; x++ {
 		for y := 0; y < level.Height; y++ {
 			c := Coordinate{x, y}
-			loot[c] = Loot{
-				Type: LootTypeEmpty,
-			}
 			bitStream[c] = getBit(level)
 		}
 	}
 
-	for dataType, count := range level.DataRequired {
-		filled := 0
-		for filled < count {
-			// make sure it's empty first
-			x := rand.Intn(level.Width - 1)
-			y := rand.Intn(level.Height - 1)
-			c := Coordinate{x, y}
-			if loot[c].Type == LootTypeEmpty {
-				loot[c] = Loot{dataType, getRarity(level)}
-				filled++
-			}
-		}
-	}
-
-	return World{level, loot, bitStream}
+	world := World{level, loot, bitStream, 0}
+	world.spawnLoot(level.InitialLoot)
+	return world
 }
 
 func (w *World) shiftBitStream(dir Direction) {
@@ -269,4 +306,39 @@ func (w *World) ExtractLoot(c Coordinate) Loot {
 		return l
 	}
 	return Loot{Type: LootTypeEmpty}
+}
+
+func (w *World) spawnLoot(n int) {
+	filled := 0
+	for filled < n {
+		// make sure it's empty first
+		x := rand.Intn(w.Level.Width - 1)
+		y := rand.Intn(w.Level.Height - 1)
+		c := Coordinate{x, y}
+
+		// even though it's a sparse map, this should work due to default types in go :squint:
+		if w.Loot[c].Type == LootTypeEmpty {
+			w.Loot[c] = newLoot(w.Level)
+			filled++
+		}
+	}
+}
+
+func (w *World) TickLoot() {
+	// tick all existing loot
+	newLoot := make(map[Coordinate]Loot)
+	for c, loot := range w.Loot {
+		loot.tick(w.Level.LootDecayRate)
+		if loot.Type != LootTypeEmpty {
+			newLoot[c] = loot
+		}
+	}
+	w.Loot = newLoot
+
+	// spawn new loot if needed
+	w.LootSpawnProgress += w.Level.LootSpawnRate
+	if w.LootSpawnProgress > 1 {
+		w.LootSpawnProgress = 0
+		w.spawnLoot(1)
+	}
 }
