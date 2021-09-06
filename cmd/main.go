@@ -177,11 +177,12 @@ func movePlayer(state *zen_doctor.GameState, dir zen_doctor.Direction) func(g *g
 }
 
 func gameLoop(g *gocui.Gui, lvl zen_doctor.Level) {
-	ticker := time.NewTicker((1000 / 5) * time.Millisecond)
-	defer ticker.Stop()
 
 	state := zen_doctor.NewGameState(lvl)
 	level := zen_doctor.GetLevel(state.CurrentLevel)
+
+	ticker := time.NewTicker(time.Duration(1000/level.FPS) * time.Millisecond)
+	defer ticker.Stop()
 
 	g.Update(func(g *gocui.Gui) error {
 		// in-game keybinds

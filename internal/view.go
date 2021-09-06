@@ -67,34 +67,37 @@ func (v *View) String() string {
 }
 
 // ApplyWorld populates the view with the data in the world.
-func (v *View) ApplyWorld(world World) {
+func (v *View) applyWorld(world World) {
 	for c, cell := range world.Grid {
 		switch cell.Type {
-		case CellTypeDelta:
-			v.Data[c] = WithColor(White, DeltaSymbol)
-		case CellTypeLambda:
-			v.Data[c] = WithColor(Green, LambdaSymbol)
-		case CellTypeSigma:
-			v.Data[c] = WithColor(Blue, SigmaSymbol)
-		case CellTypeOmega:
-			v.Data[c] = WithColor(Purple, OmegaSymbol)
+		case CellTypeEmpty:
+			continue
+		default:
+			v.Data[c] = WithColor(White, QuestionSymbol)
 		}
 	}
 }
 
-// ApplyBitStream populates the view with the bit stream
-func (v *View) ApplyBitStream(world World) {
+// applyBitStream populates the view with the bit stream
+func (v *View) applyBitStream(world World) {
 	for c, bs := range world.BitStream {
 		v.Data[c] = WithColor(DarkGray, bs)
 	}
 }
 
-// ApplyPlayer masks the bit stream
-func (v *View) ApplyPlayer(s *GameState) {
-	c := s.Player.Location
-	v.Data[c] = WithColor(Purple, PlayerSymbol)
+// Apply updates the view from the state.
+func (v *View) Apply(s *GameState) {
+	// First is the bit stream
+	v.applyBitStream(s.World)
 
-	// view distance
+	// Then is the world.
+	v.applyWorld(s.World)
+
+	// Then finally, the player
+	c := s.Player.Location
+	v.Data[c] = WithColor(YellowGreen, PlayerSymbol)
+
+	// mask for view distance
 	vdx := s.Player.ViewDistX
 	vdy := s.Player.ViewDistY
 	for x := c.X - vdx; x <= c.X+vdx; x++ {
@@ -113,6 +116,7 @@ func (v *View) ApplyPlayer(s *GameState) {
 				continue
 			}
 			if s.World.Grid[offset].Type != CellTypeEmpty {
+				v.Data[offset] = WithBackground(DarkGray, s.World.Grid[offset].String())
 				continue
 			}
 

@@ -16,6 +16,47 @@ const (
 	MoveRight
 )
 
+type Rarity int
+
+const (
+	Junk Rarity = iota
+	Common
+	Uncommon
+	Rare
+	Epic
+)
+
+func (r Rarity) Of(msg string) string {
+	switch r {
+	case Junk:
+		return WithColor(LightGray, msg)
+	case Common:
+		return WithColor(White, msg)
+	case Uncommon:
+		return WithColor(Green, msg)
+	case Rare:
+		return WithColor(Blue, msg)
+	case Epic:
+		return WithColor(Purple, msg)
+	}
+	return msg
+}
+
+func getRarity() Rarity {
+	v := rand.Float32()
+	if v > 0.95 {
+		return Epic
+	} else if v > 0.8 {
+		return Rare
+	} else if v > 0.5 {
+		return Uncommon
+	} else if v > 0.1 {
+		return Common
+	} else {
+		return Junk
+	}
+}
+
 type CellType int
 
 const (
@@ -26,8 +67,28 @@ const (
 	CellTypeLambda
 )
 
+func (ct CellType) String() string {
+	switch ct {
+	case CellTypeDelta:
+		return DeltaSymbol
+	case CellTypeOmega:
+		return OmegaSymbol
+	case CellTypeSigma:
+		return SigmaSymbol
+	case CellTypeLambda:
+		return LambdaSymbol
+	default:
+		return " "
+	}
+}
+
 type Cell struct {
-	Type CellType
+	Type  CellType
+	Value Rarity
+}
+
+func (c Cell) String() string {
+	return c.Value.Of(c.Type.String())
 }
 
 type World struct {
@@ -68,11 +129,11 @@ func newWorld(level LevelSettings) World {
 		filled := 0
 		for filled < count {
 			// make sure it's empty first
-			x := rand.Intn(level.Width)
-			y := rand.Intn(level.Height)
+			x := rand.Intn(level.Width - 1)
+			y := rand.Intn(level.Height - 1)
 			c := Coordinate{x, y}
 			if grid[c].Type == CellTypeEmpty {
-				grid[c] = Cell{cellType}
+				grid[c] = Cell{cellType, getRarity()}
 				filled++
 			}
 		}

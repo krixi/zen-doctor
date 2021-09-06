@@ -22,9 +22,7 @@ func NewGameState(level Level) GameState {
 
 // We want to assemble a string that represents the final game state for this frame, so we do it in layers.
 func (s *GameState) String() string {
-	s.View.ApplyBitStream(s.World)
-	s.View.ApplyWorld(s.World)
-	s.View.ApplyPlayer(s)
+	s.View.Apply(s)
 	return s.View.String()
 }
 
@@ -46,7 +44,7 @@ func (s *GameState) MovePlayer(dir Direction) {
 			c.Y--
 		}
 	case MoveDown:
-		if c.Y+1 < s.World.height {
+		if c.Y+1 < s.World.height-1 {
 			c.Y++
 		}
 	case MoveLeft:
@@ -54,7 +52,7 @@ func (s *GameState) MovePlayer(dir Direction) {
 			c.X--
 		}
 	case MoveRight:
-		if c.X+1 < s.World.width {
+		if c.X+1 < s.World.width-1 {
 			c.X++
 		}
 	}
