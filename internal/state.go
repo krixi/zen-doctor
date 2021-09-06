@@ -38,6 +38,22 @@ func (s *GameState) TickBitStream() {
 	defer s.mu.Unlock()
 
 	s.world.shiftBitStream(MoveDown)
+	s.tickCollisions()
+}
+
+// check for collisions with bad bits
+func (s *GameState) tickCollisions() {
+	level := s.GetLevel()
+
+	if threat, ok := s.world.DidCollideWith(s.player.Location, RevealedBitHelpful); ok {
+		// good bits
+		s.player.tickThreat(-1*threat, level.MaxThreat)
+	}
+
+	if threat, ok := s.world.DidCollideWith(s.player.Location, RevealedBitHarmful); ok {
+		// bad bits
+		s.player.tickThreat(threat, level.MaxThreat)
+	}
 }
 
 func (s *GameState) TickPlayer() {
@@ -91,4 +107,5 @@ func (s *GameState) MovePlayer(dir Direction) {
 	s.player.Location = c
 	level := s.GetLevel()
 	s.player.tickThreat(level.MovementThreat, level.MaxThreat)
+	s.tickCollisions()
 }

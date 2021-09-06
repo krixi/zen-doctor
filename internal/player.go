@@ -17,8 +17,6 @@ func (p *Player) tickThreat(rate, max float32) {
 	// clamp to reasonable values
 	if p.Threat < 0 {
 		p.Threat = 0
-	} else if p.Threat > max {
-		p.Threat = max
 	}
 }
 

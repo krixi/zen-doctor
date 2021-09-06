@@ -134,6 +134,27 @@ func (b Bits) ViewRevealed() string {
 	return b.Symbol
 }
 
+// Threat returns the magnitude of the threat based on the value.
+// you still need to multiply by -1 if it's helpful
+func (b Bits) Threat() float32 {
+	// TODO: make this configurable based on the level
+	switch b.Value {
+	case Junk:
+		return 1
+	case Common:
+		return 2
+	case Uncommon:
+		return 3
+	case Rare:
+		return 5
+	case Epic:
+		return 8
+	case Legendary:
+		return 15
+	}
+	return 0
+}
+
 var hiddenBits = []HiddenBitType{
 	BitTypeZero,
 	BitTypeOne,
@@ -234,4 +255,11 @@ func (w *World) shiftBitStream(dir Direction) {
 		}
 	}
 	w.BitStream = newStream
+}
+
+func (w *World) DidCollideWith(c Coordinate, bitType RevealedBitType) (float32, bool) {
+	if b, ok := w.BitStream[c]; ok {
+		return b.Threat(), b.Revealed == bitType
+	}
+	return 0, false
 }
