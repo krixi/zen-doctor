@@ -101,7 +101,7 @@ func defaultLevel() LevelConfig {
 		GoodBitChance:   0.02,
 		BadBitChance:    0.1,
 		ThreatByRarity: map[Rarity]float32{
-			Legendary: 15,
+			Legendary: 20,
 			Epic:      10,
 			Rare:      8,
 			Uncommon:  5,
@@ -180,7 +180,7 @@ func GetLevel(level Level) LevelConfig {
 		l.FPS = 3
 		l.BitStreamChance = 0.35
 		l.InitialLoot = 2
-		l.LootSpawnRate = 0.0035
+		l.LootSpawnRate = 0.004
 		l.WinConditions = []WinCondition{
 			{
 				Type:   LootTypeDelta,
@@ -207,7 +207,9 @@ func GetLevel(level Level) LevelConfig {
 		l.FPS = 4
 		l.BitStreamChance = 0.45
 		l.InitialLoot = 3
-		l.LootSpawnRate = 0.004
+		l.LootSpawnRate = 0.008
+		l.ViewDistX = 8
+		l.ViewDistY = 4
 		l.WinConditions = []WinCondition{
 			{
 				Type:   LootTypeDelta,
@@ -238,7 +240,9 @@ func GetLevel(level Level) LevelConfig {
 		l.FPS = 5.5
 		l.BitStreamChance = 0.5
 		l.InitialLoot = 4
-		l.LootSpawnRate = 0.0045
+		l.LootSpawnRate = 0.01
+		l.ViewDistX = 8
+		l.ViewDistY = 4
 		l.WinConditions = []WinCondition{
 			{
 				Type:   LootTypeDelta,
@@ -269,7 +273,9 @@ func GetLevel(level Level) LevelConfig {
 		l.FPS = 7
 		l.BitStreamChance = 0.5
 		l.InitialLoot = 5
-		l.LootSpawnRate = 0.005
+		l.LootSpawnRate = 0.02
+		l.ViewDistX = 10
+		l.ViewDistY = 5
 		l.WinConditions = []WinCondition{
 			{
 				Type:   LootTypeDelta,
