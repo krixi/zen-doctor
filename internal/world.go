@@ -72,16 +72,20 @@ func (lt LootType) String() string {
 func getLootType(level LevelConfig) LootType {
 
 	checker := func(lootType LootType) bool {
-		if _, ok := level.LootTable[lootType]; !ok {
-			return false
+		if chance, ok := level.LootTable[lootType]; ok {
+			return rand.Float32() < chance
 		}
-		return rand.Float32() > level.LootTable[lootType]
+		return false
 	}
 
-	types := []LootType{LootTypeDelta, LootTypeLambda, LootTypeSigma, LootTypeOmega}
-	for _, t := range types {
-		if checker(t) {
-			return t
+	for _, want := range level.WinConditions {
+		if checker(want.Type) {
+			return want.Type
+		}
+	}
+	for _, want := range level.Bonus {
+		if checker(want) {
+			return want
 		}
 	}
 	return level.DefaultLootType
@@ -234,6 +238,7 @@ type World struct {
 	Loot              map[Coordinate]Loot
 	BitStream         map[Coordinate]Bits
 	LootSpawnProgress float32
+	Exit              *Coordinate
 }
 
 func newWorld(level LevelConfig) World {
@@ -247,7 +252,11 @@ func newWorld(level LevelConfig) World {
 		}
 	}
 
-	world := World{level, loot, bitStream, 0}
+	world := World{
+		Level:     level,
+		Loot:      loot,
+		BitStream: bitStream,
+	}
 	world.spawnLoot(level.InitialLoot)
 	return world
 }
@@ -279,7 +288,7 @@ func (w *World) shiftBitStream(dir Direction) {
 	w.BitStream = newStream
 }
 
-func (w *World) DidCollideWith(c Coordinate, bitType RevealedBitType) (float32, bool) {
+func (w *World) DidCollideWithBit(c Coordinate, bitType RevealedBitType) (float32, bool) {
 	if b, ok := w.BitStream[c]; ok {
 		return b.Threat(w.Level), b.Revealed == bitType
 	}
@@ -335,10 +344,30 @@ func (w *World) TickLoot() {
 	}
 	w.Loot = newLoot
 
+	// make sure there's always at least one loot in the world
+	if len(newLoot) == 0 {
+		w.spawnLoot(1)
+	}
+
 	// spawn new loot if needed
 	w.LootSpawnProgress += w.Level.LootSpawnRate
 	if w.LootSpawnProgress > 1 {
 		w.LootSpawnProgress = 0
 		w.spawnLoot(1)
 	}
+}
+
+func (w *World) UnlockExit() {
+	if w.Exit == nil {
+		x := rand.Intn(w.Level.Width - 1)
+		y := rand.Intn(w.Level.Height - 1)
+		w.Exit = &Coordinate{x, y}
+	}
+}
+
+func (w *World) DidCollideWithExit(c Coordinate) bool {
+	if w.Exit == nil {
+		return false
+	}
+	return w.Exit.X == c.X && w.Exit.Y == c.Y
 }

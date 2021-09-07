@@ -33,7 +33,10 @@ const (
 	White       Color = 255
 )
 
-func GameOver() string {
+func GameOver(didWin bool) string {
+	if didWin {
+		return WithColor(Green, "You did it!")
+	}
 	return WithColor(Red, "Your hack has been detected!")
 }
 
@@ -80,6 +83,10 @@ func (v *View) applyWorld(world *World) {
 		default:
 			v.Data[c] = loot.WithIntegrity(QuestionSymbol)
 		}
+	}
+
+	if world.Exit != nil {
+		v.Data[*world.Exit] = WithColor(Pink, ReferenceMarkSymbol)
 	}
 }
 
@@ -167,7 +174,7 @@ func (v *View) ThreatMeter(current, max float32) string {
 	return b.String()
 }
 
-func (v *View) LootProgressMeter(current, max float32) string {
+func (v *View) ActionProgressMeter(current, max float32) string {
 	b := strings.Builder{}
 	// find the percent, convert that to an int over v.Width
 	if current > max {
@@ -193,13 +200,20 @@ func (v *View) DataCollected(state *GameState) string {
 	b := strings.Builder{}
 	for _, want := range state.level.WinConditions {
 		if amount, ok := state.player.DataCollected[want.Type]; ok {
-			b.WriteString(fmt.Sprintf("%s %.0f\n", want.Type.String(), amount))
+			str := fmt.Sprintf("%s %.0f\n", want.Type.String(), amount)
+			if amount > want.Amount {
+				str = WithColor(Green, str)
+			}
+			b.WriteString(str)
 		}
 	}
 	for _, want := range state.level.Bonus {
 		if amount, ok := state.player.DataCollected[want]; ok {
 			b.WriteString(fmt.Sprintf("%s %.0f\n", want.String(), amount))
 		}
+	}
+	if state.isExitUnlocked() {
+		b.WriteString(fmt.Sprintf("Exit %s unlocked!\n", WithColor(Pink, ReferenceMarkSymbol)))
 	}
 	return b.String()
 }

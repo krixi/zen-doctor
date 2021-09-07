@@ -6,17 +6,36 @@ type Player struct {
 	Location      Coordinate
 	Threat        float32
 	Inventory     []Loot
-	CurrentLoot   looting
+	CurrentAction playerAction
 	DataCollected map[LootType]float32
 }
 
-// holds data about a looting in progress
-type looting struct {
+type ActionType int
+
+const (
+	ActionTypeNone ActionType = iota
+	ActionTypeLoot
+	ActionTypeExit
+)
+
+func (at ActionType) String() string {
+	switch at {
+	case ActionTypeLoot:
+		return "Looting"
+	case ActionTypeExit:
+		return "Leaving"
+	}
+	return ""
+}
+
+// holds data about a playerAction in progress
+type playerAction struct {
+	Type     ActionType
 	Progress float32
 	Location Coordinate
 }
 
-func (l *looting) tick(rate float32) {
+func (l *playerAction) tick(rate float32) {
 	l.Progress += rate
 	if l.Progress < 0 {
 		l.Progress = 0
@@ -26,14 +45,18 @@ func (l *looting) tick(rate float32) {
 	}
 }
 
-func (l *looting) encounter(c Coordinate) {
+func (l *playerAction) encounter(c Coordinate) {
 	if c.X != l.Location.X || c.Y != l.Location.Y {
 		l.Progress = 0
 		l.Location = c
 	}
 }
-func (l *looting) IsComplete() bool {
+func (l *playerAction) IsComplete() bool {
 	return l.Progress >= 100
+}
+
+func (l *playerAction) IsActive() bool {
+	return l.Progress > 0
 }
 
 func newPlayer(loc Coordinate) Player {
@@ -52,12 +75,24 @@ func (p *Player) tickThreat(rate, max float32) {
 	}
 }
 
-func (p *Player) tickLoot(rate float32) {
-	p.CurrentLoot.tick(rate)
+func (p *Player) tickAction(t ActionType, rate float32) {
+	if p.CurrentAction.Type != t {
+		p.CurrentAction = playerAction{
+			Type:     t,
+			Progress: 0,
+		}
+	}
+	p.CurrentAction.tick(rate)
 }
 
-func (p *Player) encounterLoot(c Coordinate) {
-	p.CurrentLoot.encounter(c)
+func (p *Player) encounter(t ActionType, c Coordinate) {
+	if p.CurrentAction.Type != t {
+		p.CurrentAction = playerAction{
+			Type:     t,
+			Location: c,
+		}
+	}
+	p.CurrentAction.encounter(c)
 }
 
 func (p *Player) isDetected(maxThreat float32) bool {
@@ -75,6 +110,6 @@ func (p *Player) CollectLoot(loot Loot) {
 		} else {
 			p.DataCollected[loot.Type] = loot.Data
 		}
-		p.CurrentLoot.Progress = 0
+		p.CurrentAction.Progress = 0
 	}
 }

@@ -5,11 +5,12 @@ import (
 )
 
 type GameState struct {
-	level  LevelConfig
-	player Player
-	world  World
-	view   View
-	mu     sync.Mutex
+	level    LevelConfig
+	player   Player
+	world    World
+	view     View
+	mu       sync.Mutex
+	complete bool
 }
 
 func NewGameState(level Level) GameState {
@@ -34,8 +35,24 @@ func (s *GameState) ThreatMeter() string {
 	return s.view.ThreatMeter(s.player.Threat, s.Level().MaxThreat)
 }
 
-func (s *GameState) LootProgressMeter() string {
-	return s.view.LootProgressMeter(s.player.CurrentLoot.Progress, 100)
+func (s *GameState) ProgressBar() string {
+	return s.view.ActionProgressMeter(s.player.CurrentAction.Progress, 100)
+}
+
+func (s *GameState) ProgressBarType() string {
+	if s.player.CurrentAction.IsActive() {
+		return s.player.CurrentAction.Type.String()
+	}
+	return ""
+}
+
+func (s *GameState) isExitUnlocked() bool {
+	for _, want := range s.level.WinConditions {
+		if !want.IsMet(s) {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *GameState) TickWorld() {
@@ -43,6 +60,11 @@ func (s *GameState) TickWorld() {
 	defer s.mu.Unlock()
 
 	s.world.TickLoot()
+
+	// check if world exit is unlocked
+	if s.isExitUnlocked() {
+		s.world.UnlockExit()
+	}
 }
 
 func (s *GameState) TickBitStream() {
@@ -57,19 +79,31 @@ func (s *GameState) TickPlayer() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// handle player looting
-	if s.world.DidCollideWithLoot(s.player.Location) {
-		s.player.encounterLoot(s.player.Location)
-		s.player.tickLoot(s.level.LootSpeed)
+	// handle player actions
+	if s.world.DidCollideWithExit(s.player.Location) {
+		s.player.encounter(ActionTypeExit, s.player.Location)
+		s.player.tickAction(ActionTypeExit, s.level.LeaveSpeed)
+
+		if s.player.CurrentAction.IsComplete() {
+			s.complete = true
+		}
+	} else if s.world.DidCollideWithLoot(s.player.Location) {
+		s.player.encounter(ActionTypeLoot, s.player.Location)
+		s.player.tickAction(ActionTypeLoot, s.level.LootSpeed)
 
 		// move loot to inventory once it's completely looted.
-		if s.player.CurrentLoot.IsComplete() {
+		if s.player.CurrentAction.IsComplete() {
 			s.player.CollectLoot(s.world.ExtractLoot(s.player.Location))
 		}
 	} else {
-		s.player.tickLoot(s.level.LootSpeedDecay)
+		switch s.player.CurrentAction.Type {
+		case ActionTypeLoot:
+			s.player.tickAction(ActionTypeLoot, s.level.LootSpeedDecay)
+		case ActionTypeExit:
+			s.player.tickAction(ActionTypeExit, s.level.LeaveSpeed)
+		}
 
-		// don't decay threat while looting
+		// only decay threat while not performing an action
 		s.player.tickThreat(s.level.ThreatDecay, s.level.MaxThreat)
 	}
 }
@@ -77,13 +111,13 @@ func (s *GameState) TickPlayer() {
 // check for collisions with bad bits
 func (s *GameState) tickCollisions() {
 	// note: not wrapped in mutex since this is called from mutex protected calls already.
-	if threat, ok := s.world.DidCollideWith(s.player.Location, RevealedBitHelpful); ok {
+	if threat, ok := s.world.DidCollideWithBit(s.player.Location, RevealedBitHelpful); ok {
 		// good bits
 		s.player.tickThreat(-1*threat, s.level.MaxThreat)
 		s.world.NeutralizeBit(s.player.Location)
 	}
 
-	if threat, ok := s.world.DidCollideWith(s.player.Location, RevealedBitHarmful); ok {
+	if threat, ok := s.world.DidCollideWithBit(s.player.Location, RevealedBitHarmful); ok {
 		// bad bits
 		s.player.tickThreat(threat, s.level.MaxThreat)
 	}
@@ -99,6 +133,10 @@ func (s *GameState) Reset() {
 
 func (s *GameState) IsGameOver() bool {
 	return s.player.isDetected(s.level.MaxThreat)
+}
+
+func (s *GameState) IsComplete() bool {
+	return s.complete
 }
 
 func (s *GameState) Level() LevelConfig {

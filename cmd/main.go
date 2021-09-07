@@ -17,9 +17,9 @@ var (
 )
 
 const (
-	threatView  = "threat"
-	lootingView = "looting"
-	itemsView   = "items"
+	threatView      = "threat"
+	progressBarView = "progress"
+	itemsView       = "items"
 )
 
 func main() {
@@ -81,7 +81,7 @@ func layout(state *zen_doctor.GameState) func(g *gocui.Gui) error {
 			v.Wrap = true
 			renderInventory(v, state)
 		}
-		if err := lootMeter(g, state, x1, y1, x2, y2); err != nil {
+		if err := progressBar(g, state, x1, y1, x2, y2); err != nil {
 			return err
 		}
 
@@ -122,12 +122,12 @@ func renderInventory(v *gocui.View, state *zen_doctor.GameState) {
 	fmt.Fprintln(v, b.String())
 }
 
-func lootMeter(g *gocui.Gui, state *zen_doctor.GameState, x1, y1, x2, y2 int) error {
-	if v, err := g.SetView(lootingView, x1, y2+1, x2, y2+3); err != nil {
+func progressBar(g *gocui.Gui, state *zen_doctor.GameState, x1, y1, x2, y2 int) error {
+	if v, err := g.SetView(progressBarView, x1, y2+1, x2, y2+3); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
-		v.Title = "Looting Progress"
+		v.Title = ""
 	}
 	return nil
 }
@@ -183,17 +183,22 @@ func movePlayer(state *zen_doctor.GameState, dir zen_doctor.Direction) func(g *g
 	}
 }
 
-func gameOver(g *gocui.Gui) error {
+func gameOver(g *gocui.Gui, didWin bool) error {
 	maxX, maxY := g.Size()
-	gameOverText := zen_doctor.GameOver()
+	gameOverText := zen_doctor.GameOver(didWin)
 	x1, y1, x2, y2 := zen_doctor.CalculateViewPosition(len(gameOverText)+1, 2, maxX, maxY)
 	if v, err := g.SetView("game over", x1, y1, x2, y2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 		g.SetCurrentView("game over")
-		g.SelFgColor = gocui.ColorRed
-		v.Title = "GAME OVER"
+		if didWin {
+			g.SelFgColor = gocui.ColorGreen
+			v.Title = "YOU WIN"
+		} else {
+			g.SelFgColor = gocui.ColorRed
+			v.Title = "GAME OVER"
+		}
 		fmt.Fprintf(v, "%s", gameOverText)
 	}
 	return nil
@@ -224,16 +229,17 @@ func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
 					fmt.Fprintf(v, "%s", state.ThreatMeter())
 				}
 				// loot view
-				if v, err := g.View(lootingView); err == nil {
+				if v, err := g.View(progressBarView); err == nil {
 					v.Clear()
-					fmt.Fprintf(v, "%s", state.LootProgressMeter())
+					v.Title = state.ProgressBarType()
+					fmt.Fprintf(v, "%s", state.ProgressBar())
 				}
 				if v, err := g.View(itemsView); err == nil {
 					renderInventory(v, state)
 				}
-				if state.IsGameOver() {
+				if state.IsGameOver() || state.IsComplete() {
 					done <- true
-					return gameOver(g)
+					return gameOver(g, state.IsComplete())
 				}
 				return nil
 			})
