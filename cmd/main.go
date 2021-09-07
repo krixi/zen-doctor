@@ -12,20 +12,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	done = make(chan bool)
-)
-
 const (
 	threatView      = "threat"
 	progressBarView = "progress"
 	itemsView       = "items"
 )
 
-// we need this to be global so we can replace it when the level is over.
-var state = zen_doctor.NewGameState(zen_doctor.Tutorial)
-var collected = make([]zen_doctor.Loot, 0)
-var startTime = time.Now()
+var (
+	done = make(chan bool)
+	// we need this to be global so we can replace it when the level is over.
+	state     = zen_doctor.NewGameState(zen_doctor.Tutorial)
+	collected = make([]zen_doctor.Loot, 0)
+	startTime = time.Now()
+)
 
 func main() {
 	rand.Seed(time.Now().Unix())
