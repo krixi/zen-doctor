@@ -5,9 +5,9 @@ const (
 	QuestionSymbol     = `?`
 	FullBlockSymbol    = `█`
 	DeltaSymbol        = `Δ` // Loot symbols
-	OmegaSymbol        = `Ω`
-	SigmaSymbol        = `Σ`
 	LambdaSymbol       = `λ`
+	SigmaSymbol        = `Σ`
+	OmegaSymbol        = `Ω`
 	RuneOSymbol        = `ᛟ` // exit
 	RuneFSymbol        = `ᚠ` // Helpful bits
 	RuneWSymbol        = `ᚥ`

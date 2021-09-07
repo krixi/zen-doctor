@@ -3,6 +3,7 @@ package zen_doctor
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 func CalculateViewPosition(width, height, screenWidth, screenHeight int) (int, int, int, int) {
@@ -33,11 +34,72 @@ const (
 	White       Color = 255
 )
 
-func GameOver(didWin bool) string {
-	if didWin {
-		return WithColor(Green, "You did it!")
+func GameOver(didWin bool, elapsed time.Duration, collection ...Loot) string {
+
+	// group collection by type and then by rarity. We want a display like:
+	// 1Δ 5Δ 13Δ 21Δ 6Δ
+	byType := make(map[LootType]map[Rarity]int)
+	for _, loot := range collection {
+		lt := loot.Type
+		r := loot.Rarity
+		if _, ok := byType[lt]; !ok {
+			byType[lt] = make(map[Rarity]int)
+		}
+		if count, ok := byType[lt][r]; ok {
+			byType[lt][r] = count + 1
+		} else {
+			byType[lt][r] = 1
+		}
 	}
-	return WithColor(Red, "Your hack has been detected!")
+
+	getLine := func(lt LootType, counts map[Rarity]int) (string, int) {
+		b := strings.Builder{}
+		hierarchy := []Rarity{Legendary, Epic, Rare, Uncommon, Common, Junk}
+		found := 0
+		for _, rarity := range hierarchy {
+			if count, ok := counts[rarity]; ok {
+				b.WriteString(fmt.Sprintf("%d%s ", count, lt.WithRarity(rarity)))
+				found++
+			}
+		}
+		if found > 0 {
+			b.WriteString("\n")
+		}
+		return b.String(), found
+	}
+
+	b := strings.Builder{}
+	if didWin {
+		b.WriteString(WithColor(Green, "You did it! Results:\n"))
+	} else {
+		b.WriteString(WithColor(Red, "You were caught! Results:\n"))
+	}
+	hierarchy := []LootType{LootTypeDelta, LootTypeLambda, LootTypeSigma, LootTypeOmega}
+	for _, lt := range hierarchy {
+		if counts, ok := byType[lt]; ok {
+			line, found := getLine(lt, counts)
+			if found > 0 {
+				b.WriteString(line)
+			}
+		}
+	}
+	b.WriteString(ElapsedTime(elapsed))
+	return b.String()
+}
+
+func ElapsedTime(elapsed time.Duration) string {
+	d := elapsed.Round(time.Second)
+	h := d / time.Hour
+	d -= h * time.Hour
+	m := d / time.Minute
+	d -= m * time.Minute
+	s := d / time.Second
+	if h > 0 {
+		return fmt.Sprintf("%dh %dm %ds", h, m, s)
+	} else if m > 0 {
+		return fmt.Sprintf("%dm %ds", m, s)
+	}
+	return fmt.Sprintf("%2.1fs", elapsed.Seconds())
 }
 
 func WithColor(color Color, msg string) string {

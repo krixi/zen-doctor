@@ -69,6 +69,25 @@ func (lt LootType) String() string {
 	}
 }
 
+func (lt LootType) WithRarity(rarity Rarity) string {
+	msg := lt.String()
+	switch rarity {
+	case Junk:
+		return WithColor(LightGray, msg)
+	case Common:
+		return WithColor(White, msg)
+	case Uncommon:
+		return WithColor(Green, msg)
+	case Rare:
+		return WithColor(Blue, msg)
+	case Epic:
+		return WithColor(Purple, msg)
+	case Legendary:
+		return WithColor(Orange, msg)
+	}
+	return msg
+}
+
 func getLootType(level LevelConfig) LootType {
 
 	checker := func(lootType LootType) bool {
@@ -111,22 +130,7 @@ func newLoot(level LevelConfig) Loot {
 }
 
 func (l *Loot) String() string {
-	msg := l.Type.String()
-	switch l.Rarity {
-	case Junk:
-		return WithColor(LightGray, msg)
-	case Common:
-		return WithColor(White, msg)
-	case Uncommon:
-		return WithColor(Green, msg)
-	case Rare:
-		return WithColor(Blue, msg)
-	case Epic:
-		return WithColor(Purple, msg)
-	case Legendary:
-		return WithColor(Orange, msg)
-	}
-	return msg
+	return l.Type.WithRarity(l.Rarity)
 }
 
 func (l *Loot) tick(rate float32) {

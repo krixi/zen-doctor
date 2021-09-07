@@ -161,8 +161,6 @@ func GetLevel(level Level) LevelConfig {
 	case Level1:
 		l.FPS = 2
 		l.BitStreamChance = 0.25
-		l.GoodBitChance = 0.03
-		l.BadBitChance = 0.11
 		l.WinConditions = []WinCondition{
 			{
 				Type:   LootTypeDelta,
@@ -179,8 +177,6 @@ func GetLevel(level Level) LevelConfig {
 	case Level2:
 		l.FPS = 3
 		l.BitStreamChance = 0.35
-		l.GoodBitChance = 0.035
-		l.BadBitChance = 0.12
 		l.InitialLoot = 2
 		l.LootSpawnRate = 0.0035
 		l.WinConditions = []WinCondition{
@@ -206,10 +202,8 @@ func GetLevel(level Level) LevelConfig {
 		}
 
 	case Level3:
-		l.FPS = 4.5
+		l.FPS = 4
 		l.BitStreamChance = 0.45
-		l.GoodBitChance = 0.04
-		l.BadBitChance = 0.13
 		l.InitialLoot = 3
 		l.LootSpawnRate = 0.004
 		l.WinConditions = []WinCondition{
@@ -239,10 +233,8 @@ func GetLevel(level Level) LevelConfig {
 		}
 
 	case Level4:
-		l.FPS = 7
+		l.FPS = 5.5
 		l.BitStreamChance = 0.5
-		l.GoodBitChance = 0.05
-		l.BadBitChance = 0.14
 		l.InitialLoot = 4
 		l.LootSpawnRate = 0.0045
 		l.WinConditions = []WinCondition{
@@ -272,7 +264,7 @@ func GetLevel(level Level) LevelConfig {
 		}
 
 	case Level5:
-		l.FPS = 10
+		l.FPS = 7
 		l.BitStreamChance = 0.5
 		l.InitialLoot = 5
 		l.LootSpawnRate = 0.005

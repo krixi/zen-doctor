@@ -24,6 +24,8 @@ const (
 
 // we need this to be global so we can replace it when the level is over.
 var state = zen_doctor.NewGameState(zen_doctor.Tutorial)
+var collected = make([]zen_doctor.Loot, 0)
+var startTime = time.Now()
 
 func main() {
 	rand.Seed(time.Now().Unix())
@@ -129,7 +131,7 @@ func renderInventory(v *gocui.View, state *zen_doctor.GameState) {
 	fmt.Fprintf(v, state.DataWanted())
 	fmt.Fprintf(v, strings.Repeat("─", 18))
 	fmt.Fprintln(v, "Have:")
-	fmt.Fprintln(v, state.DataCollected())
+	fmt.Fprintf(v, state.DataCollected())
 	fmt.Fprintf(v, strings.Repeat("─", 18))
 	fmt.Fprintln(v, "Collected:")
 	b := strings.Builder{}
@@ -137,6 +139,8 @@ func renderInventory(v *gocui.View, state *zen_doctor.GameState) {
 		b.WriteString(have.String())
 	}
 	fmt.Fprintln(v, b.String())
+	fmt.Fprintf(v, strings.Repeat("─", 18))
+	fmt.Fprintf(v, zen_doctor.ElapsedTime(time.Now().Sub(startTime)))
 }
 
 func progressBar(g *gocui.Gui, state *zen_doctor.GameState, x1, y1, x2, y2 int) error {
@@ -196,9 +200,12 @@ func movePlayer(state *zen_doctor.GameState, dir zen_doctor.Direction) func(g *g
 }
 
 func gameOver(g *gocui.Gui, didWin bool) error {
+	// copy over inventory to our final collection
+	collected = append(collected, state.Inventory()...)
+
 	maxX, maxY := g.Size()
-	gameOverText := zen_doctor.GameOver(didWin)
-	x1, y1, x2, y2 := zen_doctor.CalculateViewPosition(len(gameOverText)+1, 2, maxX, maxY)
+	gameOverText := zen_doctor.GameOver(didWin, time.Now().Sub(startTime), collected...)
+	x1, y1, x2, y2 := zen_doctor.CalculateViewPosition(100, 7, maxX, maxY)
 	if v, err := g.SetView("game over", x1, y1, x2, y2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
@@ -226,6 +233,9 @@ func nextLevel(g *gocui.Gui) error {
 	// clean up old view
 	g.DeleteKeybindings(current.Name())
 	g.DeleteView(current.Name())
+
+	// copy over inventory to our final collection
+	collected = append(collected, state.Inventory()...)
 
 	// create new state and initialize
 	state = zen_doctor.NewGameState(next)
