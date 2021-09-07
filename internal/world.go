@@ -261,10 +261,25 @@ func getBit(level LevelConfig) Bits {
 	return Bits{hidden, revealed, rarity, symbol}
 }
 
+type Footprint struct {
+	Intensity float32
+}
+
+func (f *Footprint) tick(rate float32) {
+	f.Intensity += rate
+}
+
+func (f *Footprint) WithIntensity() string {
+	// linearly interpolate 100 (x0) -> 0 (x1) across 255 (y0) -> 235 (y1) :elahmm:
+	y := (float32(White)*-f.Intensity + float32(DarkGray)*(f.Intensity-100)) / -100
+	return WithColor(Color(int(y)), FootprintSymbol)
+}
+
 type World struct {
 	Level             LevelConfig
 	Loot              map[Coordinate]Loot
 	BitStream         map[Coordinate]Bits
+	Footprints        map[Coordinate]Footprint
 	LootSpawnProgress float32
 	Exit              *Coordinate
 }
@@ -405,4 +420,19 @@ func (w *World) DidCollideWithExit(c Coordinate) bool {
 		return false
 	}
 	return w.Exit.X == c.X && w.Exit.Y == c.Y
+}
+
+func (w *World) Visited(c Coordinate) {
+	w.Footprints[c] = Footprint{Intensity: 100}
+}
+
+func (w *World) TickFootprints() {
+	newFootprints := make(map[Coordinate]Footprint)
+	for c, footprint := range w.Footprints {
+		footprint.tick(w.Level.FootprintDecay)
+		if footprint.Intensity > 0 {
+			newFootprints[c] = footprint
+		}
+	}
+	w.Footprints = newFootprints
 }

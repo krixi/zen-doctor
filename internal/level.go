@@ -9,6 +9,7 @@ type LevelConfig struct {
 	ViewDistX          int // How far the player can see
 	ViewDistY          int
 	FPS                float32 // How fast the bit stream renders
+	FootprintDecay     float32 // How fast footprints disappear
 	ThreatDecay        float32 // how fast threat meter decays
 	MovementThreat     float32 // how much threat per step
 	MaxThreat          float32
@@ -92,6 +93,7 @@ func defaultLevel() LevelConfig {
 		ViewDistX:       6,
 		ViewDistY:       3,
 		FPS:             1.25,
+		FootprintDecay:  -1,
 		ThreatDecay:     -0.03,
 		MovementThreat:  0.3,
 		MaxThreat:       50,

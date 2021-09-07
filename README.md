@@ -6,7 +6,7 @@ To play it, just clone this repo and run `go run cmd/main.go`
 ideas:
 
 1. Maps that have fixed objectives instead of completely random
-2. footprints where you've been
+2. ~footprints where you've been~
 3. AI enemies: patrol (with vision cone), follow your tracks, homing on your location (unleashed on 100% threat - game over when they catch you)
 4. auto-move on double-tap input
 5. Items you can use - build pylons, portals, or things

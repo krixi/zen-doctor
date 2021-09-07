@@ -65,6 +65,8 @@ func (s *GameState) TickWorld() {
 	if s.isExitUnlocked() {
 		s.world.UnlockExit()
 	}
+
+	s.world.TickFootprints()
 }
 
 func (s *GameState) TickBitStream() {
@@ -176,4 +178,5 @@ func (s *GameState) MovePlayer(dir Direction) {
 	level := s.Level()
 	s.player.tickThreat(level.MovementThreat, level.MaxThreat)
 	s.tickCollisions()
+	s.world.Visited(c)
 }

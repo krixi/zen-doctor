@@ -21,10 +21,10 @@ const (
 	PsiSymbol          = `ψ`
 	DaggerSymbol       = `†`
 	KoppaSymbol        = `ϟ`
+	FootprintSymbol    = `.` // footprints
 
 	PhiSymbol           = `Φ` // unused
 	CloverSymbol        = `⌘`
 	DiamondSymbol       = `◈`
-	FiveDotSymbol       = `⁙`
 	ReferenceMarkSymbol = `※`
 )

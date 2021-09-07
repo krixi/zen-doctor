@@ -159,11 +159,22 @@ func (v *View) applyBitStream(world *World) {
 	}
 }
 
+func (v *View) applyFootprints(world *World) {
+	for c, footprint := range world.Footprints {
+		if bs, ok := world.BitStream[c]; ok && bs.Hidden == BitTypeEmpty {
+			v.Data[c] = footprint.WithIntensity()
+		}
+	}
+}
+
 // Apply updates the view from the state.
 // We want to assemble a string that represents the final game state for this frame, so we do it in layers.
 func (v *View) Apply(s *GameState) {
-	// First is the bit stream
+	// bottom layer is the bit stream, it includes spaces for every location
 	v.applyBitStream(&s.world)
+
+	// then is the footprints for empty spaces
+	v.applyFootprints(&s.world)
 
 	// Then is the world.
 	v.applyWorld(&s.world)
