@@ -86,7 +86,7 @@ func (v *View) applyWorld(world *World) {
 	}
 
 	if world.Exit != nil {
-		v.Data[*world.Exit] = WithColor(Pink, ReferenceMarkSymbol)
+		v.Data[*world.Exit] = exitSymbol()
 	}
 }
 
@@ -213,7 +213,11 @@ func (v *View) DataCollected(state *GameState) string {
 		}
 	}
 	if state.isExitUnlocked() {
-		b.WriteString(fmt.Sprintf("Exit %s unlocked!\n", WithColor(Pink, ReferenceMarkSymbol)))
+		b.WriteString(fmt.Sprintf("Exit %s unlocked!\n", exitSymbol()))
 	}
 	return b.String()
+}
+
+func exitSymbol() string {
+	return WithColor(Pink, RuneOSymbol)
 }

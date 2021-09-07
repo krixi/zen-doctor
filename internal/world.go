@@ -174,6 +174,42 @@ const (
 	RevealedBitHarmful
 )
 
+func (rbt RevealedBitType) SymbolByRarity(rarity Rarity, defaultStr string) string {
+	switch rbt {
+	case RevealedBitHelpful:
+		switch rarity {
+		case Legendary:
+			return RuneFSymbol
+		case Epic:
+			return RuneWSymbol
+		case Rare:
+			return RuneIngSymbol
+		case Uncommon:
+			return RuneSowiloSymbol
+		case Common:
+			return RuneLongOSymbol
+		case Junk:
+			return RuneShortOSymbol
+		}
+	case RevealedBitHarmful:
+		switch rarity {
+		case Legendary:
+			return RuneCelacSymbol
+		case Epic:
+			return RuneTvimadurSymbol
+		case Rare:
+			return RuneEolhxSymbol
+		case Uncommon:
+			return PsiSymbol
+		case Common:
+			return DaggerSymbol
+		case Junk:
+			return KoppaSymbol
+		}
+	}
+	return defaultStr
+}
+
 type Bits struct {
 	Hidden   HiddenBitType
 	Revealed RevealedBitType
@@ -201,16 +237,6 @@ var hiddenBits = []HiddenBitType{
 	BitTypeZero,
 	BitTypeOne,
 }
-var helpfulBits = []string{
-	WeirdFRuneSymbol,
-	PhiSymbol,
-	DiamondSymbol,
-}
-var harmfulBits = []string{
-	DaggerSymbol,
-	KoppaSymbol,
-	PsiSymbol,
-}
 
 func getBit(level LevelConfig) Bits {
 	hidden := BitTypeEmpty
@@ -219,16 +245,14 @@ func getBit(level LevelConfig) Bits {
 	symbol := " "
 	if rand.Float32() < level.BitStreamChance {
 		hidden = hiddenBits[rand.Intn(len(hiddenBits))]
-		symbol = hidden.String()
 		rarity = getRarity(level)
 		next := rand.Float32()
 		if next < level.BadBitChance {
 			revealed = RevealedBitHarmful
-			symbol = harmfulBits[rand.Intn(len(harmfulBits))]
 		} else if next > (1 - level.GoodBitChance) {
 			revealed = RevealedBitHelpful
-			symbol = helpfulBits[rand.Intn(len(helpfulBits))]
 		}
+		symbol = revealed.SymbolByRarity(rarity, hidden.String())
 	}
 	return Bits{hidden, revealed, rarity, symbol}
 }

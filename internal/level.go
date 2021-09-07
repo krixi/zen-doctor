@@ -53,7 +53,10 @@ type Level int
 const (
 	Tutorial Level = iota
 	Level1
-	//Level2
+	Level2
+	Level3
+	Level4
+	Level5
 )
 
 func (l Level) Equals(i int) bool {
@@ -69,19 +72,15 @@ func (l Level) Dec() Level {
 }
 
 func (l Level) IsValid() bool {
-	return l >= Tutorial && l <= Level1
+	return l >= Tutorial && l <= Level5
 }
 
 func (l Level) String() string {
 	switch l {
 	case Tutorial:
 		return "Level 0: Tutorial"
-	case Level1:
-		return "Level 1"
-	//case Level2:
-	//	return "Level 2"
 	default:
-		return fmt.Sprintf("%d", int(l))
+		return fmt.Sprintf("Level %d", int(l))
 	}
 }
 
@@ -102,9 +101,9 @@ func defaultLevel() LevelConfig {
 		ThreatByRarity: map[Rarity]float32{
 			Legendary: 15,
 			Epic:      10,
-			Rare:      6,
-			Uncommon:  4,
-			Common:    3,
+			Rare:      8,
+			Uncommon:  5,
+			Common:    3.5,
 			Junk:      2,
 		},
 		LeaveSpeed:      2,
@@ -117,8 +116,8 @@ func defaultLevel() LevelConfig {
 		LootDecayRate:   -0.001,
 		LootTable: map[LootType]float32{
 			LootTypeDelta:  0.25,
-			LootTypeLambda: 0.10,
-			LootTypeSigma:  0.10,
+			LootTypeLambda: 0.25,
+			LootTypeSigma:  0.25,
 			LootTypeOmega:  0.10,
 		},
 		LootChanceByRarity: map[Rarity]float32{
@@ -161,6 +160,9 @@ func GetLevel(level Level) LevelConfig {
 	switch level {
 	case Level1:
 		l.FPS = 2
+		l.BitStreamChance = 0.25
+		l.GoodBitChance = 0.03
+		l.BadBitChance = 0.11
 		l.WinConditions = []WinCondition{
 			{
 				Type:   LootTypeDelta,
@@ -172,8 +174,134 @@ func GetLevel(level Level) LevelConfig {
 			},
 		}
 		l.Bonus = []LootType{LootTypeSigma, LootTypeOmega}
-		l.LootTable[LootTypeLambda] = 0.25
 		l.DataMultipliers[LootTypeDelta] = 1.2
+
+	case Level2:
+		l.FPS = 3
+		l.BitStreamChance = 0.35
+		l.GoodBitChance = 0.035
+		l.BadBitChance = 0.12
+		l.InitialLoot = 2
+		l.LootSpawnRate = 0.0035
+		l.WinConditions = []WinCondition{
+			{
+				Type:   LootTypeDelta,
+				Amount: 300,
+			},
+			{
+				Type:   LootTypeLambda,
+				Amount: 100,
+			},
+			{
+				Type:   LootTypeSigma,
+				Amount: 25,
+			},
+		}
+		l.Bonus = []LootType{LootTypeOmega}
+		l.DataMultipliers = map[LootType]float32{
+			LootTypeDelta:  1.5,
+			LootTypeLambda: 1.2,
+			LootTypeSigma:  1,
+			LootTypeOmega:  1,
+		}
+
+	case Level3:
+		l.FPS = 4.5
+		l.BitStreamChance = 0.45
+		l.GoodBitChance = 0.04
+		l.BadBitChance = 0.13
+		l.InitialLoot = 3
+		l.LootSpawnRate = 0.004
+		l.WinConditions = []WinCondition{
+			{
+				Type:   LootTypeDelta,
+				Amount: 500,
+			},
+			{
+				Type:   LootTypeLambda,
+				Amount: 200,
+			},
+			{
+				Type:   LootTypeSigma,
+				Amount: 100,
+			},
+			{
+				Type:   LootTypeOmega,
+				Amount: 20,
+			},
+		}
+		l.Bonus = []LootType{}
+		l.DataMultipliers = map[LootType]float32{
+			LootTypeDelta:  2,
+			LootTypeLambda: 1.5,
+			LootTypeSigma:  1.2,
+			LootTypeOmega:  1,
+		}
+
+	case Level4:
+		l.FPS = 7
+		l.BitStreamChance = 0.5
+		l.GoodBitChance = 0.05
+		l.BadBitChance = 0.14
+		l.InitialLoot = 4
+		l.LootSpawnRate = 0.0045
+		l.WinConditions = []WinCondition{
+			{
+				Type:   LootTypeDelta,
+				Amount: 750,
+			},
+			{
+				Type:   LootTypeLambda,
+				Amount: 500,
+			},
+			{
+				Type:   LootTypeSigma,
+				Amount: 250,
+			},
+			{
+				Type:   LootTypeOmega,
+				Amount: 75,
+			},
+		}
+		l.Bonus = []LootType{}
+		l.DataMultipliers = map[LootType]float32{
+			LootTypeDelta:  2.5,
+			LootTypeLambda: 1.8,
+			LootTypeSigma:  1.5,
+			LootTypeOmega:  1.2,
+		}
+
+	case Level5:
+		l.FPS = 10
+		l.BitStreamChance = 0.5
+		l.InitialLoot = 5
+		l.LootSpawnRate = 0.005
+		l.WinConditions = []WinCondition{
+			{
+				Type:   LootTypeDelta,
+				Amount: 1000,
+			},
+			{
+				Type:   LootTypeLambda,
+				Amount: 1000,
+			},
+			{
+				Type:   LootTypeSigma,
+				Amount: 500,
+			},
+			{
+				Type:   LootTypeOmega,
+				Amount: 100,
+			},
+		}
+		l.Bonus = []LootType{}
+		l.LootTable[LootTypeOmega] = 0.25
+		l.DataMultipliers = map[LootType]float32{
+			LootTypeDelta:  3,
+			LootTypeLambda: 3,
+			LootTypeSigma:  1.8,
+			LootTypeOmega:  1.2,
+		}
 	}
 	return l
 }
