@@ -21,7 +21,7 @@ const (
 func (at ActionType) String() string {
 	switch at {
 	case ActionTypeLoot:
-		return "Looting"
+		return "Hacking"
 	case ActionTypeExit:
 		return "Leaving"
 	}
