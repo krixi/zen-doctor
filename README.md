@@ -13,3 +13,4 @@ ideas:
 6. Change the direction of the bit stream
 7. Power-ups: slow down bit stream, immune to negative bits, speed up looting, multiplier on loot value
 8. Walls and things that interrupt the bit stream - give shelter
+9. Show stats at end of game for collisions with bit stream - how many and what kind of both good and bad bits
