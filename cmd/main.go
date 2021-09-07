@@ -22,6 +22,9 @@ const (
 	itemsView       = "items"
 )
 
+// we need this to be global so we can replace it when the level is over.
+var state = zen_doctor.NewGameState(zen_doctor.Tutorial)
+
 func main() {
 	rand.Seed(time.Now().Unix())
 	g, err := gocui.NewGui(gocui.Output256)
@@ -30,27 +33,41 @@ func main() {
 	}
 	defer g.Close()
 
-	state := zen_doctor.NewGameState(zen_doctor.Tutorial)
-
 	g.Highlight = true
 	g.SelFgColor = gocui.ColorGreen
-	g.SetManagerFunc(layout(&state))
 
-	// global ket to quit
-	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
+	if err := initGame(g, &state); err != nil {
 		log.Panicln(err)
 	}
-	// game-specific keybinds
-	if err := gameKeybinds(g, &state); err != nil {
-		log.Panicln(err)
-	}
-	// start the game loop
-	go gameLoop(g, &state)
 
 	// start the terminal display loop
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
+}
+
+func quit(_ *gocui.Gui, _ *gocui.View) error {
+	close(done)
+	return gocui.ErrQuit
+}
+
+func initGame(g *gocui.Gui, state *zen_doctor.GameState) error {
+	// reset the layout manager - this creates the view
+	g.SetManagerFunc(layout(state))
+
+	// global ket to quit
+	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
+		log.Panicln(err)
+	}
+
+	// game-specific keybinds
+	if err := gameKeybinds(g, state); err != nil {
+		return err
+	}
+	// start the game loop
+	go gameLoop(g, state)
+
+	return nil
 }
 
 func layout(state *zen_doctor.GameState) func(g *gocui.Gui) error {
@@ -169,11 +186,6 @@ func gameKeybinds(g *gocui.Gui, state *zen_doctor.GameState) error {
 	return nil
 }
 
-func quit(_ *gocui.Gui, _ *gocui.View) error {
-	close(done)
-	return gocui.ErrQuit
-}
-
 func movePlayer(state *zen_doctor.GameState, dir zen_doctor.Direction) func(g *gocui.Gui, v *gocui.View) error {
 	return func(g *gocui.Gui, v *gocui.View) error {
 		state.MovePlayer(dir)
@@ -202,6 +214,22 @@ func gameOver(g *gocui.Gui, didWin bool) error {
 		fmt.Fprintf(v, "%s", gameOverText)
 	}
 	return nil
+}
+
+func nextLevel(g *gocui.Gui) error {
+	// keep going until they run out of levels - if they make it all the way, winner winner chicken dinner!
+	current := state.Level()
+	next := current.Level.Inc()
+	if !next.IsValid() {
+		return gameOver(g, true)
+	}
+	// clean up old view
+	g.DeleteKeybindings(current.Name())
+	g.DeleteView(current.Name())
+
+	// create new state and initialize
+	state = zen_doctor.NewGameState(next)
+	return initGame(g, &state)
 }
 
 func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
@@ -237,9 +265,13 @@ func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
 				if v, err := g.View(itemsView); err == nil {
 					renderInventory(v, state)
 				}
-				if state.IsGameOver() || state.IsComplete() {
+				if state.IsComplete() {
 					done <- true
-					return gameOver(g, state.IsComplete())
+					return nextLevel(g)
+				}
+				if state.IsGameOver() {
+					done <- true
+					return gameOver(g, false)
 				}
 				return nil
 			})

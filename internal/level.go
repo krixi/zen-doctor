@@ -53,7 +53,7 @@ type Level int
 const (
 	Tutorial Level = iota
 	Level1
-	Level2
+	//Level2
 )
 
 func (l Level) Equals(i int) bool {
@@ -69,7 +69,7 @@ func (l Level) Dec() Level {
 }
 
 func (l Level) IsValid() bool {
-	return l >= Tutorial && l <= Level2
+	return l >= Tutorial && l <= Level1
 }
 
 func (l Level) String() string {
@@ -78,18 +78,10 @@ func (l Level) String() string {
 		return "Level 0: Tutorial"
 	case Level1:
 		return "Level 1"
-	case Level2:
-		return "Level 2"
+	//case Level2:
+	//	return "Level 2"
 	default:
 		return fmt.Sprintf("%d", int(l))
-	}
-}
-
-func Levels() []Level {
-	return []Level{
-		Tutorial,
-		Level1,
-		Level2,
 	}
 }
 
@@ -162,9 +154,27 @@ func defaultLevel() LevelConfig {
 }
 
 func GetLevel(level Level) LevelConfig {
-	// TODO: adjust settings for each level.
 	l := defaultLevel()
 	l.Level = level
+
+	// customize defaults for the requested level
+	switch level {
+	case Level1:
+		l.FPS = 2
+		l.WinConditions = []WinCondition{
+			{
+				Type:   LootTypeDelta,
+				Amount: 200,
+			},
+			{
+				Type:   LootTypeLambda,
+				Amount: 50,
+			},
+		}
+		l.Bonus = []LootType{LootTypeSigma, LootTypeOmega}
+		l.LootTable[LootTypeLambda] = 0.25
+		l.DataMultipliers[LootTypeDelta] = 1.2
+	}
 	return l
 }
 

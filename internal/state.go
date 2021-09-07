@@ -123,14 +123,6 @@ func (s *GameState) tickCollisions() {
 	}
 }
 
-func (s *GameState) Reset() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.player.Threat = 0
-	s.player.Location = Coordinate{0, 0}
-}
-
 func (s *GameState) IsGameOver() bool {
 	return s.player.isDetected(s.level.MaxThreat)
 }
