@@ -179,9 +179,9 @@ func (rbt RevealedBitType) SymbolByRarity(rarity Rarity, defaultStr string) stri
 	case RevealedBitHelpful:
 		switch rarity {
 		case Legendary:
-			return RuneFSymbol
-		case Epic:
 			return RuneWSymbol
+		case Epic:
+			return RuneFSymbol
 		case Rare:
 			return RuneIngSymbol
 		case Uncommon:
