@@ -90,6 +90,8 @@ func (s *GameState) TickPlayer() {
 	} else if s.world.DidCollideWithLoot(s.player.Location) {
 		s.player.encounter(ActionTypeLoot, s.player.Location)
 		s.player.tickAction(ActionTypeLoot, s.level.LootSpeed)
+		// prevent loot from despawning while we loot it
+		s.world.TickLootAt(s.player.Location, -2*s.level.LootDecayRate)
 
 		// move loot to inventory once it's completely looted.
 		if s.player.CurrentAction.IsComplete() {

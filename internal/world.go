@@ -361,6 +361,13 @@ func (w *World) spawnLoot(n int) {
 	}
 }
 
+func (w *World) TickLootAt(c Coordinate, rate float32) {
+	if loot, ok := w.Loot[c]; ok {
+		loot.tick(rate)
+		w.Loot[c] = loot
+	}
+}
+
 func (w *World) TickLoot() {
 	// tick all existing loot
 	newLoot := make(map[Coordinate]Loot)
