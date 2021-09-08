@@ -13,13 +13,13 @@ type GameState struct {
 	complete bool
 }
 
-func NewGameState(level Level) GameState {
+func NewGameState(level Level, mode CompatibilityMode) GameState {
 	l := GetLevel(level)
 	return GameState{
 		level:  l,
 		world:  newWorld(l),
 		player: newPlayer(Coordinate{0, 0}),
-		view:   newView(l.Width, l.Height),
+		view:   newView(l.Width, l.Height, mode),
 	}
 }
 

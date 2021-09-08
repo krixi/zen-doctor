@@ -34,7 +34,7 @@ const (
 	White       Color = 255
 )
 
-func GameOver(didWin bool, elapsed time.Duration, collection ...Loot) string {
+func GameOver(didWin bool, elapsed time.Duration, mode CompatibilityMode, collection ...Loot) string {
 
 	// group collection by type and then by rarity. We want a display like:
 	// 1Δ 5Δ 13Δ 21Δ 6Δ
@@ -58,7 +58,7 @@ func GameOver(didWin bool, elapsed time.Duration, collection ...Loot) string {
 		found := 0
 		for _, rarity := range hierarchy {
 			if count, ok := counts[rarity]; ok {
-				b.WriteString(fmt.Sprintf("%d%s ", count, lt.WithRarity(rarity)))
+				b.WriteString(fmt.Sprintf("%d%s ", count, lt.WithRarity(rarity, mode)))
 				found++
 			}
 		}
@@ -113,15 +113,21 @@ func WithBackground(color Color, msg string) string {
 type View struct {
 	Width  int
 	Height int
+	Mode   CompatibilityMode
 	Data   map[Coordinate]string
 }
 
-func newView(w, h int) View {
+func newView(w, h int, mode CompatibilityMode) View {
 	return View{
 		Width:  w,
 		Height: h,
+		Mode:   mode,
 		Data:   make(map[Coordinate]string),
 	}
+}
+
+func (v *View) SetCompatibility(mode CompatibilityMode) {
+	v.Mode = mode
 }
 
 func (v *View) String() string {
@@ -148,7 +154,7 @@ func (v *View) applyWorld(world *World) {
 	}
 
 	if world.Exit != nil {
-		v.Data[*world.Exit] = exitSymbol()
+		v.Data[*world.Exit] = exitSymbol(v.Mode)
 	}
 }
 
@@ -181,7 +187,7 @@ func (v *View) Apply(s *GameState) {
 
 	// Then finally, the player
 	c := s.player.Location
-	v.Data[c] = WithColor(YellowGreen, PlayerSymbol)
+	v.Data[c] = WithColor(YellowGreen, PlayerSymbolS.ForMode(v.Mode))
 
 	// mask for view distance
 	level := s.Level()
@@ -204,7 +210,7 @@ func (v *View) Apply(s *GameState) {
 			}
 			loot := s.world.Loot[offset]
 			if loot.Type != LootTypeEmpty {
-				v.Data[offset] = WithBackground(DarkGray, loot.String())
+				v.Data[offset] = WithBackground(DarkGray, loot.SymbolForMode(v.Mode))
 				continue
 			}
 
@@ -218,7 +224,7 @@ func (v *View) Apply(s *GameState) {
 				case RevealedBitHarmful:
 					color = Red
 				}
-				v.Data[offset] = WithBackground(DarkGray, WithColor(color, bs.ViewRevealed()))
+				v.Data[offset] = WithBackground(DarkGray, WithColor(color, bs.ViewRevealed(v.Mode)))
 			}
 		}
 	}
@@ -242,7 +248,7 @@ func (v *View) ThreatMeter(current, max float32) string {
 		} else {
 			color = Red
 		}
-		b.WriteString(WithColor(color, FullBlockSymbol))
+		b.WriteString(WithColor(color, ProgressBarSymbol.ForMode(v.Mode)))
 	}
 	return b.String()
 }
@@ -256,7 +262,7 @@ func (v *View) ActionProgressMeter(current, max float32) string {
 	percent := current / max
 	progress := int(percent * float32(v.Width))
 	for i := 0; i < progress; i++ {
-		b.WriteString(WithColor(LightBlue, FullBlockSymbol))
+		b.WriteString(WithColor(LightBlue, ProgressBarSymbol.ForMode(v.Mode)))
 	}
 	return b.String()
 }
@@ -264,7 +270,7 @@ func (v *View) ActionProgressMeter(current, max float32) string {
 func (v *View) DataWanted(state *GameState) string {
 	b := strings.Builder{}
 	for _, want := range state.Level().WinConditions {
-		b.WriteString(fmt.Sprintf("%s %.0f\n", want.Type.String(), want.Amount))
+		b.WriteString(fmt.Sprintf("%s %.0f\n", want.Type.SymbolForMode(v.Mode), want.Amount))
 	}
 	return b.String()
 }
@@ -273,7 +279,7 @@ func (v *View) DataCollected(state *GameState) string {
 	b := strings.Builder{}
 	for _, want := range state.level.WinConditions {
 		if amount, ok := state.player.DataCollected[want.Type]; ok {
-			str := fmt.Sprintf("%s %.0f\n", want.Type.String(), amount)
+			str := fmt.Sprintf("%s %.0f\n", want.Type.SymbolForMode(v.Mode), amount)
 			if amount > want.Amount {
 				str = WithColor(Green, str)
 			}
@@ -282,15 +288,15 @@ func (v *View) DataCollected(state *GameState) string {
 	}
 	for _, want := range state.level.Bonus {
 		if amount, ok := state.player.DataCollected[want]; ok {
-			b.WriteString(fmt.Sprintf("%s %.0f\n", want.String(), amount))
+			b.WriteString(fmt.Sprintf("%s %.0f\n", want.SymbolForMode(v.Mode), amount))
 		}
 	}
 	if state.isExitUnlocked() {
-		b.WriteString(fmt.Sprintf("Exit %s unlocked!\n", exitSymbol()))
+		b.WriteString(fmt.Sprintf("Exit %s unlocked!\n", exitSymbol(v.Mode)))
 	}
 	return b.String()
 }
 
-func exitSymbol() string {
-	return WithColor(Pink, RuneOSymbol)
+func exitSymbol(mode CompatibilityMode) string {
+	return WithColor(Pink, ExitSymbol.ForMode(mode))
 }

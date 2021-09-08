@@ -54,23 +54,23 @@ const (
 	LootTypeLambda
 )
 
-func (lt LootType) String() string {
+func (lt LootType) SymbolForMode(mode CompatibilityMode) string {
 	switch lt {
 	case LootTypeDelta:
-		return DeltaSymbol
+		return DeltaSymbol.ForMode(mode)
 	case LootTypeOmega:
-		return OmegaSymbol
+		return OmegaSymbol.ForMode(mode)
 	case LootTypeSigma:
-		return SigmaSymbol
+		return SigmaSymbol.ForMode(mode)
 	case LootTypeLambda:
-		return LambdaSymbol
+		return LambdaSymbol.ForMode(mode)
 	default:
 		return " "
 	}
 }
 
-func (lt LootType) WithRarity(rarity Rarity) string {
-	msg := lt.String()
+func (lt LootType) WithRarity(rarity Rarity, mode CompatibilityMode) string {
+	msg := lt.SymbolForMode(mode)
 	switch rarity {
 	case Junk:
 		return WithColor(LightGray, msg)
@@ -129,8 +129,8 @@ func newLoot(level LevelConfig) Loot {
 	}
 }
 
-func (l *Loot) String() string {
-	return l.Type.WithRarity(l.Rarity)
+func (l *Loot) SymbolForMode(mode CompatibilityMode) string {
+	return l.Type.WithRarity(l.Rarity, mode)
 }
 
 func (l *Loot) tick(rate float32) {
@@ -178,54 +178,42 @@ const (
 	RevealedBitHarmful
 )
 
-func (rbt RevealedBitType) SymbolByRarity(rarity Rarity, defaultStr string) string {
-	switch rbt {
-	case RevealedBitHelpful:
-		switch rarity {
-		case Legendary:
-			return RuneWSymbol
-		case Epic:
-			return RuneFSymbol
-		case Rare:
-			return RuneIngSymbol
-		case Uncommon:
-			return RuneSowiloSymbol
-		case Common:
-			return RuneLongOSymbol
-		case Junk:
-			return RuneShortOSymbol
-		}
-	case RevealedBitHarmful:
-		switch rarity {
-		case Legendary:
-			return RuneCelacSymbol
-		case Epic:
-			return RuneTvimadurSymbol
-		case Rare:
-			return RuneEolhxSymbol
-		case Uncommon:
-			return PsiSymbol
-		case Common:
-			return DaggerSymbol
-		case Junk:
-			return KoppaSymbol
-		}
-	}
-	return defaultStr
-}
-
 type Bits struct {
 	Hidden   HiddenBitType
 	Revealed RevealedBitType
 	Value    Rarity
-	Symbol   string
 }
 
 func (b Bits) ViewHidden() string {
 	return b.Hidden.String()
 }
-func (b Bits) ViewRevealed() string {
-	return b.Symbol
+func (b Bits) ViewRevealed(mode CompatibilityMode) string {
+	switch b.Revealed {
+	case RevealedBitHelpful:
+		return goodBitSymbolsByRarity[b.Value].ForMode(mode)
+	case RevealedBitHarmful:
+		return badBitSymbolsByRarity[b.Value].ForMode(mode)
+	default:
+		return b.Hidden.String()
+	}
+}
+
+var badBitSymbolsByRarity = map[Rarity]Symbol{
+	Legendary: BadBit6,
+	Epic:      BadBit5,
+	Rare:      BadBit4,
+	Uncommon:  BadBit3,
+	Common:    BadBit2,
+	Junk:      BadBit1,
+}
+
+var goodBitSymbolsByRarity = map[Rarity]Symbol{
+	Legendary: GoodBit6,
+	Epic:      GoodBit5,
+	Rare:      GoodBit4,
+	Uncommon:  GoodBit3,
+	Common:    GoodBit2,
+	Junk:      GoodBit1,
 }
 
 // Threat returns the magnitude of the threat based on the value.
@@ -246,7 +234,6 @@ func getBit(level LevelConfig) Bits {
 	hidden := BitTypeEmpty
 	revealed := RevealedBitBenign
 	rarity := Junk
-	symbol := " "
 	if rand.Float32() < level.BitStreamChance {
 		hidden = hiddenBits[rand.Intn(len(hiddenBits))]
 		rarity = getRarity(level)
@@ -256,9 +243,8 @@ func getBit(level LevelConfig) Bits {
 		} else if next > (1 - level.GoodBitChance) {
 			revealed = RevealedBitHelpful
 		}
-		symbol = revealed.SymbolByRarity(rarity, hidden.String())
 	}
-	return Bits{hidden, revealed, rarity, symbol}
+	return Bits{hidden, revealed, rarity}
 }
 
 type Footprint struct {

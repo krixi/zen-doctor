@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -21,9 +22,10 @@ const (
 var (
 	done = make(chan bool)
 	// we need this to be global so we can replace it when the level is over.
-	state     = zen_doctor.NewGameState(zen_doctor.Tutorial)
+	state     zen_doctor.GameState
 	collected = make([]zen_doctor.Loot, 0)
 	startTime = time.Now()
+	mode      = zen_doctor.CompatibilityAny
 )
 
 func main() {
@@ -34,9 +36,14 @@ func main() {
 	}
 	defer g.Close()
 
+	mode = parseArgs()
+	if mode == zen_doctor.CompatibilityAscii {
+		g.ASCII = true
+	}
 	g.Highlight = true
 	g.SelFgColor = gocui.ColorGreen
 
+	state = zen_doctor.NewGameState(zen_doctor.Tutorial, mode)
 	if err := initGame(g, &state); err != nil {
 		log.Panicln(err)
 	}
@@ -45,6 +52,19 @@ func main() {
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
+}
+
+func parseArgs() zen_doctor.CompatibilityMode {
+	mode := zen_doctor.CompatibilityAny
+	for _, arg := range os.Args {
+		switch strings.ToLower(arg) {
+		case "--ascii":
+			mode = zen_doctor.CompatibilityAscii
+		case "--latin":
+			mode = zen_doctor.CompatibilityLatin
+		}
+	}
+	return mode
 }
 
 func quit(_ *gocui.Gui, _ *gocui.View) error {
@@ -135,7 +155,7 @@ func renderInventory(v *gocui.View, state *zen_doctor.GameState) {
 	fmt.Fprintln(v, "Collected:")
 	b := strings.Builder{}
 	for _, have := range state.Inventory() {
-		b.WriteString(have.String())
+		b.WriteString(have.SymbolForMode(mode))
 	}
 	fmt.Fprintln(v, b.String())
 	fmt.Fprintf(v, strings.Repeat("─", 18))
@@ -203,7 +223,7 @@ func gameOver(g *gocui.Gui, didWin bool) error {
 	collected = append(collected, state.Inventory()...)
 
 	maxX, maxY := g.Size()
-	gameOverText := zen_doctor.GameOver(didWin, time.Now().Sub(startTime), collected...)
+	gameOverText := zen_doctor.GameOver(didWin, time.Now().Sub(startTime), mode, collected...)
 	x1, y1, x2, y2 := zen_doctor.CalculateViewPosition(100, 7, maxX, maxY)
 	if v, err := g.SetView("game over", x1, y1, x2, y2); err != nil {
 		if err != gocui.ErrUnknownView {
@@ -237,7 +257,7 @@ func nextLevel(g *gocui.Gui) error {
 	collected = append(collected, state.Inventory()...)
 
 	// create new state and initialize
-	state = zen_doctor.NewGameState(next)
+	state = zen_doctor.NewGameState(next, mode)
 	return initGame(g, &state)
 }
 
@@ -271,8 +291,14 @@ func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
 					v.Title = state.ProgressBarType()
 					fmt.Fprintf(v, "%s", state.ProgressBar())
 				}
+				// inventory view
 				if v, err := g.View(itemsView); err == nil {
 					renderInventory(v, state)
+				}
+				// main game view
+				if v, err := g.View(level.Name()); err == nil {
+					v.Clear()
+					fmt.Fprintf(v, "%s", state.String())
 				}
 				if state.IsComplete() {
 					done <- true
@@ -289,16 +315,6 @@ func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
 		case <-viewUpdate.C:
 			// game tick
 			state.TickBitStream()
-
-			// update the views
-			g.Update(func(g *gocui.Gui) error {
-				// main game view
-				if v, err := g.View(level.Name()); err == nil {
-					v.Clear()
-					fmt.Fprintf(v, "%s", state.String())
-				}
-				return nil
-			})
 		}
 	}
 }
