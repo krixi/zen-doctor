@@ -24,7 +24,8 @@ var (
 	// we need this to be global so we can replace it when the level is over.
 	state     zen_doctor.GameState
 	collected = make([]zen_doctor.Loot, 0)
-	startTime = time.Now()
+	lastTick  = time.Now()
+	elapsed   = 0 * time.Millisecond
 	mode      = zen_doctor.CompatibilityAny
 )
 
@@ -159,7 +160,7 @@ func renderInventory(v *gocui.View, state *zen_doctor.GameState) {
 	}
 	fmt.Fprintln(v, b.String())
 	fmt.Fprintf(v, strings.Repeat("─", 18))
-	fmt.Fprintf(v, zen_doctor.ElapsedTime(time.Now().Sub(startTime)))
+	fmt.Fprintf(v, zen_doctor.ElapsedTime(elapsed))
 }
 
 func progressBar(g *gocui.Gui, state *zen_doctor.GameState, x1, y1, x2, y2 int) error {
@@ -206,6 +207,40 @@ func gameKeybinds(g *gocui.Gui, state *zen_doctor.GameState) error {
 	if err := g.SetKeybinding(level.Name(), 'd', gocui.ModNone, movePlayer(state, zen_doctor.MoveRight)); err != nil {
 		return err
 	}
+
+	// pause
+	if err := g.SetKeybinding(level.Name(), gocui.KeySpace, gocui.ModNone, pause); err != nil {
+		return err
+	}
+	return nil
+}
+
+// kills the game's goroutine and shows a pause window
+func pause(g *gocui.Gui, _ *gocui.View) error {
+	maxX, maxY := g.Size()
+	x1, y1, x2, y2 := zen_doctor.CalculateViewPosition(100, 2, maxX, maxY)
+	if v, err := g.SetView("pause", x1, y1, x2, y2); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+		g.SetCurrentView("pause")
+		done <- true
+		v.Title = "Paused"
+		fmt.Fprintln(v, "Press space to resume")
+
+		if err := g.SetKeybinding("pause", gocui.KeySpace, gocui.ModNone, resume); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func resume(g *gocui.Gui, _ *gocui.View) error {
+	g.SetCurrentView(state.Level().Name())
+	g.DeleteView("pause")
+	g.DeleteKeybindings("pause")
+	lastTick = time.Now()
+	go gameLoop(g, &state)
 	return nil
 }
 
@@ -223,7 +258,7 @@ func gameOver(g *gocui.Gui, didWin bool) error {
 	collected = append(collected, state.Inventory()...)
 
 	maxX, maxY := g.Size()
-	gameOverText := zen_doctor.GameOver(didWin, time.Now().Sub(startTime), mode, collected...)
+	gameOverText := zen_doctor.GameOver(didWin, elapsed, mode, collected...)
 	x1, y1, x2, y2 := zen_doctor.CalculateViewPosition(100, 7, maxX, maxY)
 	if v, err := g.SetView("game over", x1, y1, x2, y2); err != nil {
 		if err != gocui.ErrUnknownView {
@@ -280,6 +315,10 @@ func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
 
 		// Fixed update
 		case <-fixedUpdate.C:
+			now := time.Now()
+			elapsed = elapsed + now.Sub(lastTick)
+			lastTick = now
+
 			state.TickWorld()
 			state.TickPlayer()
 			g.Update(func(g *gocui.Gui) error {
