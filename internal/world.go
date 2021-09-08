@@ -179,41 +179,20 @@ const (
 )
 
 type Bits struct {
-	Hidden   HiddenBitType
-	Revealed RevealedBitType
-	Value    Rarity
+	Hidden         HiddenBitType
+	Revealed       RevealedBitType
+	Value          Rarity
+	RevealedSymbol AnimatedSymbol
 }
 
 func (b Bits) ViewHidden() string {
 	return b.Hidden.String()
 }
 func (b Bits) ViewRevealed(mode CompatibilityMode) string {
-	switch b.Revealed {
-	case RevealedBitHelpful:
-		return goodBitSymbolsByRarity[b.Value].ForMode(mode)
-	case RevealedBitHarmful:
-		return badBitSymbolsByRarity[b.Value].ForMode(mode)
-	default:
-		return b.Hidden.String()
+	if (b.Revealed == RevealedBitHelpful || b.Revealed == RevealedBitHarmful) && b.RevealedSymbol != nil {
+		return b.RevealedSymbol.ForMode(mode)
 	}
-}
-
-var badBitSymbolsByRarity = map[Rarity]Symbol{
-	Legendary: BadBit6,
-	Epic:      BadBit5,
-	Rare:      BadBit4,
-	Uncommon:  BadBit3,
-	Common:    BadBit2,
-	Junk:      BadBit1,
-}
-
-var goodBitSymbolsByRarity = map[Rarity]Symbol{
-	Legendary: GoodBit6,
-	Epic:      GoodBit5,
-	Rare:      GoodBit4,
-	Uncommon:  GoodBit3,
-	Common:    GoodBit2,
-	Junk:      GoodBit1,
+	return b.Hidden.String()
 }
 
 // Threat returns the magnitude of the threat based on the value.
@@ -231,20 +210,20 @@ var hiddenBits = []HiddenBitType{
 }
 
 func getBit(level LevelConfig) Bits {
-	hidden := BitTypeEmpty
-	revealed := RevealedBitBenign
-	rarity := Junk
 	if rand.Float32() < level.BitStreamChance {
-		hidden = hiddenBits[rand.Intn(len(hiddenBits))]
-		rarity = getRarity(level)
+		hidden := hiddenBits[rand.Intn(len(hiddenBits))]
+		rarity := getRarity(level)
 		next := rand.Float32()
+		revealed := RevealedBitBenign
 		if next < level.BadBitChance {
 			revealed = RevealedBitHarmful
 		} else if next > (1 - level.GoodBitChance) {
 			revealed = RevealedBitHelpful
 		}
+		revealedSymbol := GenerateNoiseSymbolFor(revealed, rarity)
+		return Bits{hidden, revealed, rarity, revealedSymbol}
 	}
-	return Bits{hidden, revealed, rarity}
+	return Bits{BitTypeEmpty, RevealedBitBenign, Junk, nil}
 }
 
 type Footprint struct {
@@ -288,6 +267,14 @@ func newWorld(level LevelConfig) World {
 	}
 	world.spawnLoot(level.InitialLoot)
 	return world
+}
+
+func (w *World) tickAnimations() {
+	for c := range w.BitStream {
+		if w.BitStream[c].RevealedSymbol != nil {
+			w.BitStream[c].RevealedSymbol.Tick()
+		}
+	}
 }
 
 func (w *World) shiftBitStream(dir Direction) {

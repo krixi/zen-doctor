@@ -17,4 +17,5 @@ ideas:
 8. Walls and things that interrupt the bit stream - give shelter
 9. Show stats at end of game for collisions with bit stream - how many and what kind of both good and bad bits
 10. Pause button
-11. Compatibility layer for consoles that can't display certain characters
+11. ~Compatibility layer for consoles that can't display certain characters~
+12. ~Animated symbols~

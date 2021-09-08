@@ -270,6 +270,9 @@ func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
 	fixedUpdate := time.NewTicker((1000 / 30) * time.Millisecond)
 	defer fixedUpdate.Stop()
 
+	animationUpdate := time.NewTicker((1000 / 10) * time.Millisecond)
+	defer animationUpdate.Stop()
+
 	for {
 		select {
 		case <-done:
@@ -313,8 +316,11 @@ func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
 
 		// Game time update
 		case <-viewUpdate.C:
-			// game tick
 			state.TickBitStream()
+
+		// animations run at a different speed
+		case <-animationUpdate.C:
+			state.TickAnimations()
 		}
 	}
 }

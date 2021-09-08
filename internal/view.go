@@ -111,18 +111,20 @@ func WithBackground(color Color, msg string) string {
 }
 
 type View struct {
-	Width  int
-	Height int
-	Mode   CompatibilityMode
-	Data   map[Coordinate]string
+	Width      int
+	Height     int
+	Mode       CompatibilityMode
+	ExitSymbol AnimatedSymbol
+	Data       map[Coordinate]string
 }
 
 func newView(w, h int, mode CompatibilityMode) View {
 	return View{
-		Width:  w,
-		Height: h,
-		Mode:   mode,
-		Data:   make(map[Coordinate]string),
+		Width:      w,
+		Height:     h,
+		Mode:       mode,
+		ExitSymbol: &AnimatedExit,
+		Data:       make(map[Coordinate]string),
 	}
 }
 
@@ -154,7 +156,7 @@ func (v *View) applyWorld(world *World) {
 	}
 
 	if world.Exit != nil {
-		v.Data[*world.Exit] = exitSymbol(v.Mode)
+		v.Data[*world.Exit] = v.exitSymbol()
 	}
 }
 
@@ -203,9 +205,9 @@ func (v *View) Apply(s *GameState) {
 				continue
 			}
 
-			// give player a dark background but that's it
+			// special handling for the player and exit in the highlighted area
 			v.Data[offset] = WithBackground(DarkGray, v.Data[offset])
-			if x == c.X && y == c.Y {
+			if (x == c.X && y == c.Y) || (s.world.Exit != nil && x == s.world.Exit.X && y == s.world.Exit.Y) {
 				continue
 			}
 			loot := s.world.Loot[offset]
@@ -292,11 +294,15 @@ func (v *View) DataCollected(state *GameState) string {
 		}
 	}
 	if state.isExitUnlocked() {
-		b.WriteString(fmt.Sprintf("Exit %s unlocked!\n", exitSymbol(v.Mode)))
+		b.WriteString(fmt.Sprintf("Exit %s unlocked!\n", v.exitSymbol()))
 	}
 	return b.String()
 }
 
-func exitSymbol(mode CompatibilityMode) string {
-	return WithColor(Pink, ExitSymbol.ForMode(mode))
+func (v *View) tickAnimations() {
+	v.ExitSymbol.Tick()
+}
+
+func (v *View) exitSymbol() string {
+	return WithColor(Pink, v.ExitSymbol.ForMode(v.Mode))
 }

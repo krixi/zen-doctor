@@ -69,6 +69,13 @@ func (s *GameState) TickWorld() {
 	s.world.TickFootprints()
 }
 
+func (s *GameState) TickAnimations() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.view.tickAnimations()
+	s.world.tickAnimations()
+}
+
 func (s *GameState) TickBitStream() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -104,7 +111,7 @@ func (s *GameState) TickPlayer() {
 		case ActionTypeLoot:
 			s.player.tickAction(ActionTypeLoot, s.level.LootSpeedDecay)
 		case ActionTypeExit:
-			s.player.tickAction(ActionTypeExit, s.level.LeaveSpeed)
+			s.player.tickAction(ActionTypeExit, s.level.LeaveSpeedDecay)
 		}
 
 		// only decay threat while not performing an action
