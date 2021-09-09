@@ -6,8 +6,9 @@ import (
 )
 
 type GameState struct {
-	level    LevelConfig
+	level    *LevelConfig
 	player   Player
+	bits     BitStream
 	world    World
 	view     View
 	mu       sync.Mutex
@@ -18,10 +19,11 @@ func NewGameState(level Level, mode CompatibilityMode) GameState {
 	l := GetLevel(level)
 
 	return GameState{
-		level:  l,
-		world:  newWorld(l),
+		level:  &l,
+		bits:   newBitStream(&l),
 		player: newPlayer(Coordinate{1 + rand.Intn(l.Width-2), 1 + rand.Intn(l.Height-2)}),
 		view:   newView(l.Width, l.Height, mode),
+		world:  newWorld(&l),
 	}
 }
 
@@ -74,15 +76,16 @@ func (s *GameState) TickWorld() {
 func (s *GameState) TickAnimations() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.view.tickAnimations()
-	s.world.tickAnimations()
+
+	s.view.TickAnimations()
+	s.bits.TickAnimations()
 }
 
 func (s *GameState) TickBitStream() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.world.shiftBitStream(MoveDown)
+	s.level.Updater.Tick(&s.bits)
 	s.tickCollisions()
 }
 
@@ -124,14 +127,14 @@ func (s *GameState) TickPlayer() {
 // check for collisions with bad bits
 func (s *GameState) tickCollisions() {
 	// note: not wrapped in mutex since this is called from mutex protected calls already.
-	if threat, ok := s.world.DidCollideWithBit(s.player.Location, RevealedBitHelpful); ok {
-		// good bits
+	if threat, ok := s.bits.DidCollideWithBit(s.level, s.player.Location, RevealedBitHelpful); ok {
+		// good stream
 		s.player.tickThreat(-1 * threat)
-		s.world.NeutralizeBit(s.player.Location)
+		s.bits.NeutralizeBit(s.player.Location)
 	}
 
-	if threat, ok := s.world.DidCollideWithBit(s.player.Location, RevealedBitHarmful); ok {
-		// bad bits
+	if threat, ok := s.bits.DidCollideWithBit(s.level, s.player.Location, RevealedBitHarmful); ok {
+		// bad stream
 		s.player.tickThreat(threat)
 	}
 }
@@ -144,7 +147,7 @@ func (s *GameState) IsComplete() bool {
 	return s.complete
 }
 
-func (s *GameState) Level() LevelConfig {
+func (s *GameState) Level() *LevelConfig {
 	return s.level
 }
 

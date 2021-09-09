@@ -162,15 +162,15 @@ func (v *View) applyWorld(world *World) {
 }
 
 // applyBitStream populates the view with the bit stream
-func (v *View) applyBitStream(world *World) {
-	for c, bs := range world.BitStream {
+func (v *View) applyBitStream(bitStream *BitStream) {
+	for c, bs := range bitStream.stream {
 		v.Data[c] = WithColor(DarkGray, bs.ViewHidden())
 	}
 }
 
-func (v *View) applyFootprints(world *World) {
-	for c, footprint := range world.Footprints {
-		if bs, ok := world.BitStream[c]; ok && bs.Hidden == BitTypeEmpty {
+func (v *View) applyFootprints(s *GameState) {
+	for c, footprint := range s.world.Footprints {
+		if bs, ok := s.bits.stream[c]; ok && bs.Hidden == BitTypeEmpty {
 			v.Data[c] = footprint.WithIntensity()
 		}
 	}
@@ -180,10 +180,10 @@ func (v *View) applyFootprints(world *World) {
 // We want to assemble a string that represents the final game state for this frame, so we do it in layers.
 func (v *View) Apply(s *GameState) {
 	// bottom layer is the bit stream, it includes spaces for every location
-	v.applyBitStream(&s.world)
+	v.applyBitStream(&s.bits)
 
 	// then is the footprints for empty spaces
-	v.applyFootprints(&s.world)
+	v.applyFootprints(s)
 
 	// Then is the world.
 	v.applyWorld(&s.world)
@@ -218,7 +218,7 @@ func (v *View) Apply(s *GameState) {
 			}
 
 			// show the bit stream around them with a background and a color based on whether it's good or bad
-			bs := s.world.BitStream[offset]
+			bs := s.bits.stream[offset]
 			if bs.Hidden != BitTypeEmpty {
 				color := LightGray
 				switch bs.Revealed {
@@ -300,7 +300,7 @@ func (v *View) DataCollected(state *GameState) string {
 	return b.String()
 }
 
-func (v *View) tickAnimations() {
+func (v *View) TickAnimations() {
 	v.ExitSymbol.Tick()
 }
 

@@ -114,7 +114,7 @@ var PlayerSymbolS = symbol{
 	ASCII: `@`,
 }
 
-// Helpful bits
+// Helpful stream
 var GoodBit1 = symbol{
 	Runic: `ᚭ`,
 	Latin: `1`,
@@ -146,7 +146,7 @@ var GoodBit6 = symbol{
 	ASCII: `6`,
 }
 
-// Harmful bits
+// Harmful stream
 var BadBit1 = symbol{
 	Runic: `ϟ`,
 	Latin: `a`,
@@ -268,6 +268,8 @@ func GenerateNoiseSymbolFor(bitType RevealedBitType, rarity Rarity) AnimatedSymb
 		noiseSymbol.Base = badBitSymbolsByRarity[rarity]
 	case RevealedBitHelpful:
 		noiseSymbol.Base = goodBitSymbolsByRarity[rarity]
+	default:
+		return nil
 	}
 	return &noiseSymbol
 }
