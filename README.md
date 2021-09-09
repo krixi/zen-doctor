@@ -15,7 +15,7 @@ Controls:
 
 
 # about
-It's built using [gocui](https://github.com/jroimartin/gocui). To play it, run:
+It's built using [gocui](https://github.com/jroimartin/gocui) and requires go1.16 or later. To play it, run:
 
 ```shell
 go install github.com/krixi/zen-doctor@latest
