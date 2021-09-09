@@ -132,8 +132,8 @@ func defaultLevel() LevelConfig {
 		},
 		DataByRarity: map[Rarity]float32{
 			Legendary: 1000,
-			Epic:      100,
-			Rare:      70,
+			Epic:      200,
+			Rare:      80,
 			Uncommon:  40,
 			Common:    25,
 			Junk:      1,
