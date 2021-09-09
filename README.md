@@ -10,7 +10,7 @@ ideas:
 1. Maps that have fixed objectives instead of completely random
 2. ~footprints where you've been~
 3. AI enemies: patrol (with vision cone), follow your tracks, homing on your location (unleashed on 100% threat - game over when they catch you)
-4. auto-move on double-tap input
+4. ~auto-move on double-tap input~
 5. Items you can use - build pylons, portals, or things
 6. Change the direction of the bit stream
 7. Power-ups: slow down bit stream, immune to negative bits, speed up looting, multiplier on loot value, timed power up for increasing vision range, timed power up for reducing threat faster, timed "combat" power up that reduces threat when running into an enemy instead of increasing it

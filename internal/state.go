@@ -20,7 +20,7 @@ func NewGameState(level Level, mode CompatibilityMode) GameState {
 	return GameState{
 		level:  l,
 		world:  newWorld(l),
-		player: newPlayer(Coordinate{1+rand.Intn(l.Width-2), 1+rand.Intn(l.Height-2)}),
+		player: newPlayer(Coordinate{1 + rand.Intn(l.Width-2), 1 + rand.Intn(l.Height-2)}),
 		view:   newView(l.Width, l.Height, mode),
 	}
 }
@@ -117,7 +117,7 @@ func (s *GameState) TickPlayer() {
 		}
 
 		// only decay threat while not performing an action
-		s.player.tickThreat(s.level.ThreatDecay, s.level.MaxThreat)
+		s.player.tickThreat(s.level.ThreatDecay)
 	}
 }
 
@@ -126,13 +126,13 @@ func (s *GameState) tickCollisions() {
 	// note: not wrapped in mutex since this is called from mutex protected calls already.
 	if threat, ok := s.world.DidCollideWithBit(s.player.Location, RevealedBitHelpful); ok {
 		// good bits
-		s.player.tickThreat(-1*threat, s.level.MaxThreat)
+		s.player.tickThreat(-1 * threat)
 		s.world.NeutralizeBit(s.player.Location)
 	}
 
 	if threat, ok := s.world.DidCollideWithBit(s.player.Location, RevealedBitHarmful); ok {
 		// bad bits
-		s.player.tickThreat(threat, s.level.MaxThreat)
+		s.player.tickThreat(threat)
 	}
 }
 
@@ -164,28 +164,17 @@ func (s *GameState) MovePlayer(dir Direction) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	c := s.player.Location
-	switch dir {
-	case MoveUp:
-		if c.Y-1 >= 0 {
-			c.Y--
-		}
-	case MoveDown:
-		if c.Y+1 < s.level.Height-1 {
-			c.Y++
-		}
-	case MoveLeft:
-		if c.X-1 >= 0 {
-			c.X--
-		}
-	case MoveRight:
-		if c.X+1 < s.level.Width-1 {
-			c.X++
-		}
-	}
-	s.player.Location = c
-	level := s.Level()
-	s.player.tickThreat(level.MovementThreat, level.MaxThreat)
+	c := s.player.HandleMoveInput(dir, s.level.Width, s.level.Height)
+	s.player.tickThreat(s.level.MovementThreat)
+	s.tickCollisions()
+	s.world.Visited(c)
+}
+
+func (s *GameState) TickMovement() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	c := s.player.tickMove(s.level.Width, s.level.Height, s.level.MovementThreat)
 	s.tickCollisions()
 	s.world.Visited(c)
 }

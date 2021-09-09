@@ -360,6 +360,7 @@ func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
 		// animations run at a different speed
 		case <-animationUpdate.C:
 			state.TickAnimations()
+			state.TickMovement()
 		}
 	}
 }
