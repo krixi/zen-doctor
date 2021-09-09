@@ -120,8 +120,11 @@ func layout(state *zen_doctor.GameState) func(g *gocui.Gui) error {
 			v.Wrap = true
 			renderInventory(v, state)
 		}
-		if err := progressBar(g, state, x1, y1, x2, y2); err != nil {
-			return err
+		if v, err := g.SetView(progressBarView, x1, y2+1, x2, y2+3); err != nil {
+			if err != gocui.ErrUnknownView {
+				return err
+			}
+			v.Title = ""
 		}
 
 		//if v, err := g.SetView("colors", 0, 0, maxX-1, maxY-1); err != nil {
@@ -161,16 +164,6 @@ func renderInventory(v *gocui.View, state *zen_doctor.GameState) {
 	fmt.Fprintln(v, b.String())
 	fmt.Fprintf(v, strings.Repeat("─", 18))
 	fmt.Fprintf(v, zen_doctor.ElapsedTime(elapsed))
-}
-
-func progressBar(g *gocui.Gui, state *zen_doctor.GameState, x1, y1, x2, y2 int) error {
-	if v, err := g.SetView(progressBarView, x1, y2+1, x2, y2+3); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-		v.Title = ""
-	}
-	return nil
 }
 
 func gameKeybinds(g *gocui.Gui, state *zen_doctor.GameState) error {
@@ -215,10 +208,19 @@ func gameKeybinds(g *gocui.Gui, state *zen_doctor.GameState) error {
 	return nil
 }
 
+func movePlayer(state *zen_doctor.GameState, dir zen_doctor.Direction) func(g *gocui.Gui, v *gocui.View) error {
+	return func(g *gocui.Gui, v *gocui.View) error {
+		state.MovePlayer(dir)
+		v.Clear()
+		fmt.Fprintf(v, "%s", state.String())
+		return nil
+	}
+}
+
 // kills the game's goroutine and shows a pause window
 func pause(g *gocui.Gui, _ *gocui.View) error {
 	maxX, maxY := g.Size()
-	x1, y1, x2, y2 := zen_doctor.CalculateViewPosition(100, 2, maxX, maxY)
+	x1, y1, x2, y2 := zen_doctor.CalculateViewPosition(80, 2, maxX, maxY)
 	if v, err := g.SetView("pause", x1, y1, x2, y2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
@@ -244,22 +246,13 @@ func resume(g *gocui.Gui, _ *gocui.View) error {
 	return nil
 }
 
-func movePlayer(state *zen_doctor.GameState, dir zen_doctor.Direction) func(g *gocui.Gui, v *gocui.View) error {
-	return func(g *gocui.Gui, v *gocui.View) error {
-		state.MovePlayer(dir)
-		v.Clear()
-		fmt.Fprintf(v, "%s", state.String())
-		return nil
-	}
-}
-
 func gameOver(g *gocui.Gui, didWin bool) error {
 	// copy over inventory to our final collection
 	collected = append(collected, state.Inventory()...)
 
 	maxX, maxY := g.Size()
 	gameOverText := zen_doctor.GameOver(didWin, elapsed, mode, collected...)
-	x1, y1, x2, y2 := zen_doctor.CalculateViewPosition(100, 7, maxX, maxY)
+	x1, y1, x2, y2 := zen_doctor.CalculateViewPosition(80, 8, maxX, maxY)
 	if v, err := g.SetView("game over", x1, y1, x2, y2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
@@ -273,6 +266,22 @@ func gameOver(g *gocui.Gui, didWin bool) error {
 			v.Title = "GAME OVER"
 		}
 		fmt.Fprintf(v, "%s", gameOverText)
+		if err := g.SetKeybinding("game over", gocui.KeySpace, gocui.ModNone, restart); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func restart(g *gocui.Gui, _ *gocui.View) error {
+	g.DeleteView("game over")
+	g.DeleteKeybindings("game over")
+	g.SelFgColor = gocui.ColorGreen
+	lastTick = time.Now()
+	elapsed = 0 * time.Millisecond
+	state = zen_doctor.NewGameState(zen_doctor.Tutorial, mode)
+	if err := initGame(g, &state); err != nil {
+		return err
 	}
 	return nil
 }

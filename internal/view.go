@@ -84,6 +84,7 @@ func GameOver(didWin bool, elapsed time.Duration, mode CompatibilityMode, collec
 		}
 	}
 	b.WriteString(ElapsedTime(elapsed))
+	b.WriteString("\nPress <space> to retry\n")
 	return b.String()
 }
 
