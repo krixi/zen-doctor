@@ -182,8 +182,9 @@ type World struct {
 
 func newWorld(level *LevelConfig) World {
 	world := World{
-		Level: level,
-		Loot:  make(map[Coordinate]Loot),
+		Level:      level,
+		Loot:       make(map[Coordinate]Loot),
+		Footprints: make(map[Coordinate]Footprint),
 	}
 	world.spawnLoot(level.InitialLoot)
 	return world

@@ -17,11 +17,18 @@ type GameState struct {
 
 func NewGameState(level Level, mode CompatibilityMode) GameState {
 	l := GetLevel(level)
+	return NewGameStateWithPlayerAt(Coordinate{
+		X: 1 + rand.Intn(l.Width-2),
+		Y: 1 + rand.Intn(l.Height-2),
+	}, level, mode)
+}
 
+func NewGameStateWithPlayerAt(c Coordinate, level Level, mode CompatibilityMode) GameState {
+	l := GetLevel(level)
 	return GameState{
 		level:  &l,
 		bits:   newBitStream(&l),
-		player: newPlayer(Coordinate{1 + rand.Intn(l.Width-2), 1 + rand.Intn(l.Height-2)}),
+		player: newPlayer(c),
 		view:   newView(l.Width, l.Height, mode),
 		world:  newWorld(&l),
 	}
@@ -145,6 +152,10 @@ func (s *GameState) IsGameOver() bool {
 
 func (s *GameState) IsComplete() bool {
 	return s.complete
+}
+
+func (s *GameState) PlayerLocation() Coordinate {
+	return s.player.Location
 }
 
 func (s *GameState) Level() *LevelConfig {

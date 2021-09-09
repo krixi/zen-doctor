@@ -246,7 +246,7 @@ func (v *View) ThreatMeter(current, max float32) string {
 		var color Color
 		if threat < v.Width/3 {
 			color = Green
-		} else if threat < (v.Width/3)+(v.Width/3) {
+		} else if threat < (2*v.Width)/3 {
 			color = Yellow
 		} else {
 			color = Red

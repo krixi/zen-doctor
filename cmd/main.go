@@ -301,7 +301,8 @@ func nextLevel(g *gocui.Gui) error {
 	collected = append(collected, state.Inventory()...)
 
 	// create new state and initialize
-	state = zen_doctor.NewGameState(next, mode)
+	loc := state.PlayerLocation()
+	state = zen_doctor.NewGameStateWithPlayerAt(loc, next, mode)
 	return initGame(g, &state)
 }
 
