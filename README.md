@@ -7,9 +7,9 @@ the good bits in the bit stream, will reduce your threat.
 
 
 Controls:
-- W / A / S / D or the arrow keys to move
-- <space> to pause, resume, or restart if you are caught
-- Ctrl-C to quit
+- `w` / `a` / `s` / `d` or the arrow keys to move
+- `space` to pause, resume, or restart if you are caught
+- `ctrl-c` to quit
 
 ![demo](demo.gif)
 
@@ -19,7 +19,7 @@ It's built using [gocui](https://github.com/jroimartin/gocui). To play it, just 
 If you can't see all the symbols because your font doesn't support them, try running with `--latin`, or `--ascii` for only ASCII characters.
 
 
-ideas:
+TO-DO list:
 
 1. Maps that have fixed objectives instead of completely random
 2. AI enemies: patrol (with vision cone), follow your tracks, homing on your location (unleashed on 100% threat - game over when they catch you)
