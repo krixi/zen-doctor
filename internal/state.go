@@ -1,6 +1,7 @@
 package zen_doctor
 
 import (
+	"math/rand"
 	"sync"
 )
 
@@ -15,10 +16,11 @@ type GameState struct {
 
 func NewGameState(level Level, mode CompatibilityMode) GameState {
 	l := GetLevel(level)
+
 	return GameState{
 		level:  l,
 		world:  newWorld(l),
-		player: newPlayer(Coordinate{0, 0}),
+		player: newPlayer(Coordinate{1+rand.Intn(l.Width-2), 1+rand.Intn(l.Height-2)}),
 		view:   newView(l.Width, l.Height, mode),
 	}
 }
