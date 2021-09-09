@@ -29,6 +29,7 @@ const (
 	Pink        Color = 200
 	Orange      Color = 208
 	Yellow      Color = 226
+	Black       Color = 232
 	DarkGray    Color = 235
 	LightGray   Color = 245
 	White       Color = 255
@@ -58,7 +59,7 @@ func GameOver(didWin bool, elapsed time.Duration, mode CompatibilityMode, collec
 		found := 0
 		for _, rarity := range hierarchy {
 			if count, ok := counts[rarity]; ok {
-				b.WriteString(fmt.Sprintf("%d%s ", count, lt.WithRarity(rarity, mode)))
+				b.WriteString(fmt.Sprintf("%d%s ", count, WithColor(rarity.Color(), lt.SymbolForMode(mode))))
 				found++
 			}
 		}
@@ -116,7 +117,17 @@ type View struct {
 	Height     int
 	Mode       CompatibilityMode
 	ExitSymbol AnimatedSymbol
-	Data       map[Coordinate]string
+	Data       map[Coordinate]Cell
+}
+
+type Cell struct {
+	Background Color
+	Foreground Color
+	Symbol     string
+}
+
+func (c Cell) String() string {
+	return WithBackground(c.Background, WithColor(c.Foreground, c.Symbol))
 }
 
 func newView(w, h int, mode CompatibilityMode) View {
@@ -125,7 +136,7 @@ func newView(w, h int, mode CompatibilityMode) View {
 		Height:     h,
 		Mode:       mode,
 		ExitSymbol: &AnimatedExit,
-		Data:       make(map[Coordinate]string),
+		Data:       make(map[Coordinate]Cell),
 	}
 }
 
@@ -138,97 +149,69 @@ func (v *View) String() string {
 	for y := 0; y < v.Height; y++ {
 		for x := 0; x < v.Width; x++ {
 			c := Coordinate{x, y}
-			b.WriteString(v.Data[c])
+			b.WriteString(v.Data[c].String())
 		}
 		b.WriteString("\n")
 	}
 	return b.String()
 }
 
-// ApplyWorld populates the view with the data in the world.
-func (v *View) applyWorld(world *World) {
-	for c, loot := range world.Loot {
-		switch loot.Type {
-		case LootTypeEmpty:
-			continue
-		default:
-			v.Data[c] = loot.WithIntegrity(QuestionSymbol)
-		}
-	}
-
-	if world.Exit != nil {
-		v.Data[*world.Exit] = v.exitSymbol()
-	}
-}
-
-// applyBitStream populates the view with the bit stream
-func (v *View) applyBitStream(bitStream *BitStream) {
-	for c, bs := range bitStream.stream {
-		v.Data[c] = WithColor(DarkGray, bs.ViewHidden())
-	}
-}
-
-func (v *View) applyFootprints(s *GameState) {
-	for c, footprint := range s.world.Footprints {
-		if bs, ok := s.bits.stream[c]; ok && bs.Hidden == BitTypeEmpty {
-			v.Data[c] = footprint.WithIntensity()
-		}
-	}
-}
-
 // Apply updates the view from the state.
-// We want to assemble a string that represents the final game state for this frame, so we do it in layers.
+// When we render, we need to have a string that represents the X,Y plane for the game. We can do this in a single
+// pass, and have a predictable draw order, by assembling the three components of a cell (background color, foreground color,
+// and symbol), and overwriting these with a draw order priority. Things at the top of the for-loop are lower priority,
+// with the highest priority at the bottom.
 func (v *View) Apply(s *GameState) {
-	// bottom layer is the bit stream, it includes spaces for every location
-	v.applyBitStream(&s.bits)
+	for x := 0; x < s.level.Width; x++ {
+		for y := 0; y < s.level.Height; y++ {
+			c := Coordinate{x, y}
 
-	// then is the footprints for empty spaces
-	v.applyFootprints(s)
-
-	// Then is the world.
-	v.applyWorld(&s.world)
-
-	// Then finally, the player
-	c := s.player.Location
-	v.Data[c] = WithColor(YellowGreen, PlayerSymbolS.ForMode(v.Mode))
-
-	// mask for view distance
-	level := s.Level()
-	vdx := level.ViewDistX
-	vdy := level.ViewDistY
-	for x := c.X - vdx; x <= c.X+vdx; x++ {
-		for y := c.Y - vdy; y <= c.Y+vdy; y++ {
-
-			offset := Coordinate{x, y}
-
-			// skip out of bounds
-			if _, ok := v.Data[offset]; !ok {
-				continue
+			// Hidden bit stream is always shown if there's nothing else.
+			bs := s.bits.stream[c]
+			cell := Cell{
+				Background: Black,
+				Foreground: DarkGray,
+				Symbol:     bs.ViewHidden(),
 			}
 
-			// special handling for the player and exit in the highlighted area
-			v.Data[offset] = WithBackground(DarkGray, v.Data[offset])
-			if (x == c.X && y == c.Y) || (s.world.Exit != nil && x == s.world.Exit.X && y == s.world.Exit.Y) {
-				continue
-			}
-			loot := s.world.Loot[offset]
-			if loot.Type != LootTypeEmpty {
-				v.Data[offset] = WithBackground(DarkGray, loot.SymbolForMode(v.Mode))
-				continue
+			// footprints
+			if footprint, ok := s.world.Footprints[c]; ok && bs.Hidden == BitTypeEmpty {
+				cell.Foreground, cell.Symbol = footprint.WithIntensity()
 			}
 
-			// show the bit stream around them with a background and a color based on whether it's good or bad
-			bs := s.bits.stream[offset]
-			if bs.Hidden != BitTypeEmpty {
-				color := LightGray
-				switch bs.Revealed {
-				case RevealedBitHelpful:
-					color = Green
-				case RevealedBitHarmful:
-					color = Red
+			// determine if the bit stream and loot should be revealed, by checking the distance from this tile to the player
+			inPlayerRange := s.player.Location.InRange(s.level.ViewDist, c)
+
+			// revealed bit stream
+			if inPlayerRange {
+				cell.Background = DarkGray
+				if bs.Hidden != BitTypeEmpty {
+					cell.Foreground, cell.Symbol = bs.ViewRevealed(v.Mode)
 				}
-				v.Data[offset] = WithBackground(DarkGray, WithColor(color, bs.ViewRevealed(v.Mode)))
 			}
+
+			// loot
+			if loot, ok := s.world.Loot[c]; ok {
+				if loot.Type != LootTypeEmpty {
+					if inPlayerRange {
+						cell.Foreground, cell.Symbol = loot.SymbolForMode(v.Mode)
+					} else {
+						cell.Foreground, cell.Symbol = loot.WithIntegrity(QuestionSymbol)
+					}
+				}
+			}
+
+			// Exit location
+			if s.world.Exit != nil && c.Equals(*s.world.Exit) {
+				cell.Foreground, cell.Symbol = v.exitSymbol()
+			}
+
+			// finally, player location
+			if c.Equals(s.player.Location) {
+				cell.Foreground, cell.Symbol = YellowGreen, PlayerSymbol.ForMode(v.Mode)
+			}
+
+			v.Data[c] = cell
 		}
 	}
 }
@@ -295,7 +278,7 @@ func (v *View) DataCollected(state *GameState) string {
 		}
 	}
 	if state.isExitUnlocked() {
-		b.WriteString(fmt.Sprintf("Exit %s unlocked!\n", v.exitSymbol()))
+		b.WriteString(fmt.Sprintf("Exit %s unlocked!\n", WithColor(v.exitSymbol())))
 	}
 	return b.String()
 }
@@ -304,6 +287,6 @@ func (v *View) TickAnimations() {
 	v.ExitSymbol.Tick()
 }
 
-func (v *View) exitSymbol() string {
-	return WithColor(Pink, v.ExitSymbol.ForMode(v.Mode))
+func (v *View) exitSymbol() (Color, string) {
+	return Pink, v.ExitSymbol.ForMode(v.Mode)
 }

@@ -1,10 +1,23 @@
 package zen_doctor
 
-import "math/rand"
+import (
+	"math"
+	"math/rand"
+)
 
 type Coordinate struct {
 	X int
 	Y int
+}
+
+func (c Coordinate) InRange(radius float64, other Coordinate) bool {
+	rx := float64(c.X - other.X)
+	ry := float64(c.Y-other.Y) * 2 // to compensate for terminal character sizes
+	return math.Sqrt(rx*rx+ry*ry) < radius
+}
+
+func (c Coordinate) Equals(other Coordinate) bool {
+	return c.X == other.X && c.Y == other.Y
 }
 
 type Direction int
@@ -32,6 +45,24 @@ const (
 	Epic
 	Legendary
 )
+
+func (r Rarity) Color() Color {
+	switch r {
+	case Junk:
+		return LightGray
+	case Common:
+		return White
+	case Uncommon:
+		return Green
+	case Rare:
+		return Blue
+	case Epic:
+		return Purple
+	case Legendary:
+		return Orange
+	}
+	return DarkGray
+}
 
 func getRarity(level *LevelConfig) Rarity {
 	v := rand.Float32()
@@ -75,25 +106,6 @@ func (lt LootType) SymbolForMode(mode CompatibilityMode) string {
 	}
 }
 
-func (lt LootType) WithRarity(rarity Rarity, mode CompatibilityMode) string {
-	msg := lt.SymbolForMode(mode)
-	switch rarity {
-	case Junk:
-		return WithColor(LightGray, msg)
-	case Common:
-		return WithColor(White, msg)
-	case Uncommon:
-		return WithColor(Green, msg)
-	case Rare:
-		return WithColor(Blue, msg)
-	case Epic:
-		return WithColor(Purple, msg)
-	case Legendary:
-		return WithColor(Orange, msg)
-	}
-	return msg
-}
-
 func getLootType(level *LevelConfig) LootType {
 
 	checker := func(lootType LootType) bool {
@@ -135,8 +147,8 @@ func newLoot(level *LevelConfig) Loot {
 	}
 }
 
-func (l *Loot) SymbolForMode(mode CompatibilityMode) string {
-	return l.Type.WithRarity(l.Rarity, mode)
+func (l *Loot) SymbolForMode(mode CompatibilityMode) (Color, string) {
+	return l.Rarity.Color(), l.Type.SymbolForMode(mode)
 }
 
 func (l *Loot) tick(rate float32) {
@@ -148,14 +160,14 @@ func (l *Loot) tick(rate float32) {
 	}
 }
 
-func (l *Loot) WithIntegrity(msg string) string {
+func (l *Loot) WithIntegrity(msg string) (Color, string) {
 	if l.Integrity > 0.33 {
-		return WithColor(White, msg)
+		return White, msg
 	}
 	if l.Integrity > 0.15 {
-		return WithColor(Yellow, msg)
+		return Yellow, msg
 	}
-	return WithColor(Red, msg)
+	return Red, msg
 }
 
 type Footprint struct {
@@ -166,10 +178,10 @@ func (f *Footprint) tick(rate float32) {
 	f.Intensity += rate
 }
 
-func (f *Footprint) WithIntensity() string {
+func (f *Footprint) WithIntensity() (Color, string) {
 	// linearly interpolate 100 (x0) -> 0 (x1) across 255 (y0) -> 235 (y1) :elahmm:
 	y := (float32(White)*-f.Intensity + float32(DarkGray)*(f.Intensity-100)) / -100
-	return WithColor(Color(int(y)), FootprintSymbol)
+	return Color(int(y)), FootprintSymbol
 }
 
 type World struct {

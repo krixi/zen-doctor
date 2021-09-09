@@ -41,11 +41,18 @@ type Bits struct {
 func (b Bits) ViewHidden() string {
 	return b.Hidden.String()
 }
-func (b Bits) ViewRevealed(mode CompatibilityMode) string {
-	if b.RevealedSymbol != nil {
-		return b.RevealedSymbol.ForMode(mode)
+func (b Bits) ViewRevealed(mode CompatibilityMode) (Color, string) {
+	color := LightGray
+	switch b.Revealed {
+	case RevealedBitHelpful:
+		color = Green
+	case RevealedBitHarmful:
+		color = Red
 	}
-	return b.Hidden.String()
+	if b.RevealedSymbol != nil {
+		return color, b.RevealedSymbol.ForMode(mode)
+	}
+	return color, b.Hidden.String()
 }
 
 // Threat returns the magnitude of the threat based on the value.

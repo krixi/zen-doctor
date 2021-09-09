@@ -108,7 +108,7 @@ func (s *symbol) ForMode(mode CompatibilityMode) string {
 	}
 }
 
-var PlayerSymbolS = symbol{
+var PlayerSymbol = symbol{
 	Runic: `Ȣ`,
 	Latin: `Ȣ`,
 	ASCII: `@`,

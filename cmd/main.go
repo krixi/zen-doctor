@@ -159,7 +159,7 @@ func renderInventory(v *gocui.View, state *zen_doctor.GameState) {
 	fmt.Fprintln(v, "Collected:")
 	b := strings.Builder{}
 	for _, have := range state.Inventory() {
-		b.WriteString(have.SymbolForMode(mode))
+		b.WriteString(zen_doctor.WithColor(have.SymbolForMode(mode)))
 	}
 	fmt.Fprintln(v, b.String())
 	fmt.Fprintf(v, strings.Repeat("─", 18))

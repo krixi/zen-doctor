@@ -9,8 +9,7 @@ type LevelConfig struct {
 	Level              Level
 	Width              int                  // Width of map
 	Height             int                  // Height of map
-	ViewDistX          int                  // How far the player can see in the X direction
-	ViewDistY          int                  // how far the player can see in the Y direction
+	ViewDist           float64              // radius in which the player can view. automatically scaled 2x in the X direction.
 	FPS                float32              // How fast the bit stream renders
 	FootprintDecay     float32              // How fast footprints disappear
 	ThreatDecay        float32              // how fast threat meter decays
@@ -98,8 +97,7 @@ func defaultLevel() LevelConfig {
 		Level:           Tutorial,
 		Width:           100,
 		Height:          20,
-		ViewDistX:       6,
-		ViewDistY:       3,
+		ViewDist:        7.5,
 		FPS:             1.25,
 		FootprintDecay:  -1,
 		ThreatDecay:     -0.03,
@@ -203,6 +201,7 @@ func GetLevel(level Level) LevelConfig {
 		l.BitStreamChance = 0.35
 		l.InitialLoot = 2
 		l.LootSpawnRate = 0.004
+		l.ViewDist = 8.5
 		l.WinConditions = []WinCondition{
 			{
 				Type:   LootTypeDelta,
@@ -231,8 +230,7 @@ func GetLevel(level Level) LevelConfig {
 		l.BitStreamChance = 0.45
 		l.InitialLoot = 3
 		l.LootSpawnRate = 0.008
-		l.ViewDistX = 8
-		l.ViewDistY = 4
+		l.ViewDist = 9.5
 		l.WinConditions = []WinCondition{
 			{
 				Type:   LootTypeDelta,
@@ -265,8 +263,7 @@ func GetLevel(level Level) LevelConfig {
 		l.BitStreamChance = 0.5
 		l.InitialLoot = 4
 		l.LootSpawnRate = 0.01
-		l.ViewDistX = 8
-		l.ViewDistY = 4
+		l.ViewDist = 10.5
 		l.WinConditions = []WinCondition{
 			{
 				Type:   LootTypeDelta,
@@ -299,8 +296,7 @@ func GetLevel(level Level) LevelConfig {
 		l.BitStreamChance = 0.5
 		l.InitialLoot = 5
 		l.LootSpawnRate = 0.02
-		l.ViewDistX = 10
-		l.ViewDistY = 5
+		l.ViewDist = 11.5
 		l.WinConditions = []WinCondition{
 			{
 				Type:   LootTypeDelta,
