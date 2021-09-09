@@ -23,13 +23,11 @@ func (c Coordinate) Equals(other Coordinate) bool {
 type Direction int
 
 const (
-	// cardinal
-	MoveUp Direction = iota
+	MoveUp Direction = iota // cardinal
 	MoveDown
 	MoveLeft
 	MoveRight
-	// diagonal
-	MoveUpLeft
+	MoveUpLeft // diagonal
 	MoveUpRight
 	MoveDownLeft
 	MoveDownRight
@@ -107,23 +105,14 @@ func (lt LootType) SymbolForMode(mode CompatibilityMode) string {
 }
 
 func getLootType(level *LevelConfig) LootType {
-
-	checker := func(lootType LootType) bool {
-		if chance, ok := level.LootTable[lootType]; ok {
-			return rand.Float32() < chance
+	picked := rand.Float32()
+	lower := float32(0.0)
+	for lt, chance := range level.LootTable {
+		upper := lower + chance
+		if picked >= lower && picked < upper {
+			return lt
 		}
-		return false
-	}
-
-	for _, want := range level.WinConditions {
-		if checker(want.Type) {
-			return want.Type
-		}
-	}
-	for _, want := range level.Bonus {
-		if checker(want) {
-			return want
-		}
+		lower = upper
 	}
 	return level.DefaultLootType
 }

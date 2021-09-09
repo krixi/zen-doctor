@@ -27,12 +27,11 @@ type LevelConfig struct {
 	LootSpeedDecay     float32              // how fast loot meter falls when looting is interrupted
 	LootSpawnRate      float32              // how fast new loot is spawned into the world
 	LootDecayRate      float32              // how fast loot in the world decays
-	LootTable          map[LootType]float32 // % chance for loot to be spawned
+	LootTable          map[LootType]float32 // % chance for loot to be spawned - values in this table should add to 1
 	LootChanceByRarity map[Rarity]float32   // % chance for loot to be a specific rarity
 	DataByRarity       map[Rarity]float32   // how much data is worth, by loot rarity
 	DataMultipliers    map[LootType]float32 // multiplier for how much data is worth, by loot type
 	WinConditions      []WinCondition       // what is required to unlock the exit to this room
-	Bonus              []LootType           // the loot types considered bonus for this level
 	Updater            BitStreamUpdater     // different levels have different bit streams
 }
 
@@ -123,18 +122,14 @@ func defaultLevel() LevelConfig {
 		LootSpawnRate:   0.003,
 		LootDecayRate:   -0.001,
 		LootTable: map[LootType]float32{
-			LootTypeDelta:  0.25,
-			LootTypeLambda: 0.25,
-			LootTypeSigma:  0.25,
-			LootTypeOmega:  0.10,
+			LootTypeDelta: 1.00,
 		},
 		LootChanceByRarity: map[Rarity]float32{
 			Legendary: 0.005,
 			Epic:      0.05,
-			Rare:      0.3,
-			Uncommon:  0.6,
-			Common:    0.8,
-			Junk:      1.0,
+			Rare:      0.25,
+			Uncommon:  0.50,
+			Common:    1.00,
 		},
 		DataByRarity: map[Rarity]float32{
 			Legendary: 1000,
@@ -156,7 +151,6 @@ func defaultLevel() LevelConfig {
 				Amount: 100,
 			},
 		},
-		Bonus:   []LootType{LootTypeLambda, LootTypeSigma, LootTypeOmega},
 		Updater: newLinearBitStream(MoveLeft),
 	}
 }
@@ -180,9 +174,12 @@ func GetLevel(level Level) LevelConfig {
 				Amount: 50,
 			},
 		}
-		l.Bonus = []LootType{LootTypeSigma, LootTypeOmega}
+		l.LootTable = map[LootType]float32{
+			LootTypeDelta:  0.66,
+			LootTypeLambda: 0.34,
+		}
 		l.DataMultipliers[LootTypeDelta] = 1.2
-		l.Updater = newShiftingBitStream(bitStreamStep{
+		l.Updater = newLoopingBitStream(bitStreamStep{
 			dir:   MoveLeft,
 			delay: 10 * time.Second,
 		}, bitStreamStep{
@@ -216,14 +213,17 @@ func GetLevel(level Level) LevelConfig {
 				Amount: 25,
 			},
 		}
-		l.Bonus = []LootType{LootTypeOmega}
+		l.LootTable = map[LootType]float32{
+			LootTypeDelta:  0.50,
+			LootTypeLambda: 0.25,
+			LootTypeSigma:  0.25,
+		}
 		l.DataMultipliers = map[LootType]float32{
 			LootTypeDelta:  1.5,
 			LootTypeLambda: 1.2,
 			LootTypeSigma:  1,
-			LootTypeOmega:  1,
 		}
-		l.Updater = newShiftingBitStream(rotatingBitStream(10*time.Second, 20*time.Second, 5*time.Second)...)
+		l.Updater = newLoopingBitStream(rotatingBitStream(10*time.Second, 20*time.Second, 5*time.Second)...)
 
 	case Level3:
 		l.FPS = 4
@@ -249,14 +249,19 @@ func GetLevel(level Level) LevelConfig {
 				Amount: 20,
 			},
 		}
-		l.Bonus = []LootType{}
+		l.LootTable = map[LootType]float32{
+			LootTypeDelta:  0.40,
+			LootTypeLambda: 0.25,
+			LootTypeSigma:  0.20,
+			LootTypeOmega:  0.15,
+		}
 		l.DataMultipliers = map[LootType]float32{
 			LootTypeDelta:  2,
 			LootTypeLambda: 1.5,
 			LootTypeSigma:  1.2,
 			LootTypeOmega:  1,
 		}
-		l.Updater = newShiftingBitStream(zigZagBitStream(20*time.Second, 5*time.Second)...)
+		l.Updater = newLoopingBitStream(zigZagBitStream(20*time.Second, 5*time.Second)...)
 
 	case Level4:
 		l.FPS = 5.5
@@ -282,14 +287,19 @@ func GetLevel(level Level) LevelConfig {
 				Amount: 75,
 			},
 		}
-		l.Bonus = []LootType{}
+		l.LootTable = map[LootType]float32{
+			LootTypeDelta:  0.40,
+			LootTypeLambda: 0.25,
+			LootTypeSigma:  0.20,
+			LootTypeOmega:  0.15,
+		}
 		l.DataMultipliers = map[LootType]float32{
 			LootTypeDelta:  2.5,
 			LootTypeLambda: 1.8,
 			LootTypeSigma:  1.5,
 			LootTypeOmega:  1.2,
 		}
-		l.Updater = newShiftingBitStream(rotatingBitStream(10*time.Second, 5*time.Second, 20*time.Second)...)
+		l.Updater = newLoopingBitStream(rotatingBitStream(10*time.Second, 5*time.Second, 20*time.Second)...)
 
 	case Level5:
 		l.FPS = 7
@@ -315,15 +325,19 @@ func GetLevel(level Level) LevelConfig {
 				Amount: 100,
 			},
 		}
-		l.Bonus = []LootType{}
-		l.LootTable[LootTypeOmega] = 0.25
+		l.LootTable = map[LootType]float32{
+			LootTypeDelta:  0.40,
+			LootTypeLambda: 0.25,
+			LootTypeSigma:  0.20,
+			LootTypeOmega:  0.15,
+		}
 		l.DataMultipliers = map[LootType]float32{
 			LootTypeDelta:  3,
 			LootTypeLambda: 3,
 			LootTypeSigma:  1.8,
 			LootTypeOmega:  1.2,
 		}
-		// TODO: random direction for bit stream
+		l.Updater = newRandomBitStream(rotatingBitStream(10*time.Second, 5*time.Second, 20*time.Second)...)
 	}
 	return l
 }

@@ -180,7 +180,7 @@ type linearBitStream struct {
 	dir Direction
 }
 
-func newLinearBitStream(dir Direction) BitStreamUpdater {
+func newLinearBitStream(dir Direction) *linearBitStream {
 	return &linearBitStream{dir}
 }
 
@@ -188,10 +188,11 @@ func (b *linearBitStream) Tick(stream *BitStream) {
 	shiftBitStream(b.dir, stream)
 }
 
-type shiftingBitStream struct {
+type bitStreamWithSteps struct {
 	steps      []bitStreamStep
 	current    int
 	lastUpdate time.Time
+	next       func(current, len int) int
 }
 
 type bitStreamStep struct {
@@ -199,20 +200,33 @@ type bitStreamStep struct {
 	delay time.Duration
 }
 
-func newShiftingBitStream(steps ...bitStreamStep) BitStreamUpdater {
-	return &shiftingBitStream{
+func newLoopingBitStream(steps ...bitStreamStep) *bitStreamWithSteps {
+	return &bitStreamWithSteps{
 		steps:      steps,
 		lastUpdate: time.Now(),
+		next: func(current, len int) int {
+			if current+1 >= len {
+				return 0
+			}
+			return current + 1
+		},
 	}
 }
 
-func (s *shiftingBitStream) Tick(stream *BitStream) {
+func newRandomBitStream(steps ...bitStreamStep) *bitStreamWithSteps {
+	return &bitStreamWithSteps{
+		steps:      steps,
+		lastUpdate: time.Now(),
+		next: func(_, len int) int {
+			return rand.Intn(len)
+		},
+	}
+}
+
+func (s *bitStreamWithSteps) Tick(stream *BitStream) {
 	now := time.Now()
 	if now.Sub(s.lastUpdate) > s.steps[s.current].delay {
-		s.current++
-		if s.current >= len(s.steps) {
-			s.current = 0
-		}
+		s.current = s.next(s.current, len(s.steps))
 		s.lastUpdate = now
 	}
 	shiftBitStream(s.steps[s.current].dir, stream)

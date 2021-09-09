@@ -272,11 +272,6 @@ func (v *View) DataCollected(state *GameState) string {
 			b.WriteString(str)
 		}
 	}
-	for _, want := range state.level.Bonus {
-		if amount, ok := state.player.DataCollected[want]; ok {
-			b.WriteString(fmt.Sprintf("%s %.0f\n", want.SymbolForMode(v.Mode), amount))
-		}
-	}
 	if state.isExitUnlocked() {
 		b.WriteString(fmt.Sprintf("Exit %s unlocked!\n", WithColor(v.exitSymbol())))
 	}

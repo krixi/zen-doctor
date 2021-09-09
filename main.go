@@ -27,6 +27,7 @@ var (
 	lastTick  = time.Now()
 	elapsed   = 0 * time.Millisecond
 	mode      = zen_doctor.CompatibilityAny
+	cheatMode = false
 )
 
 func main() {
@@ -81,6 +82,12 @@ func initGame(g *gocui.Gui, state *zen_doctor.GameState) error {
 	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
 	}
+	// global keybinds to switch levels
+	g.SetKeybinding("", gocui.KeyCtrlY, gocui.ModNone, skipToLevel(zen_doctor.Level1))
+	g.SetKeybinding("", gocui.KeyCtrlU, gocui.ModNone, skipToLevel(zen_doctor.Level2))
+	g.SetKeybinding("", gocui.KeyCtrlI, gocui.ModNone, skipToLevel(zen_doctor.Level3))
+	g.SetKeybinding("", gocui.KeyCtrlO, gocui.ModNone, skipToLevel(zen_doctor.Level4))
+	g.SetKeybinding("", gocui.KeyCtrlP, gocui.ModNone, skipToLevel(zen_doctor.Level5))
 
 	// game-specific keybinds
 	if err := gameKeybinds(g, state); err != nil {
@@ -258,7 +265,10 @@ func gameOver(g *gocui.Gui, didWin bool) error {
 			return err
 		}
 		g.SetCurrentView("game over")
-		if didWin {
+		if cheatMode {
+			g.SelFgColor = gocui.ColorYellow
+			v.Title = "YOU CHEATED"
+		} else if didWin {
 			g.SelFgColor = gocui.ColorGreen
 			v.Title = "YOU WIN"
 		} else {
@@ -279,6 +289,7 @@ func restart(g *gocui.Gui, _ *gocui.View) error {
 	g.SelFgColor = gocui.ColorGreen
 	lastTick = time.Now()
 	elapsed = 0 * time.Millisecond
+	cheatMode = false
 	state = zen_doctor.NewGameState(zen_doctor.Tutorial, mode)
 	if err := initGame(g, &state); err != nil {
 		return err
@@ -304,6 +315,21 @@ func nextLevel(g *gocui.Gui) error {
 	loc := state.PlayerLocation()
 	state = zen_doctor.NewGameStateWithPlayerAt(loc, next, mode)
 	return initGame(g, &state)
+}
+
+func skipToLevel(level zen_doctor.Level) func(*gocui.Gui, *gocui.View) error {
+	return func(g *gocui.Gui, _ *gocui.View) error {
+		// clean up the current level and set cheat mode to true to tattle on them at the end
+		done <- true
+		cheatMode = true
+		current := state.Level()
+		g.DeleteKeybindings(current.Name())
+		g.DeleteView(current.Name())
+
+		// initialize the requested level
+		state = zen_doctor.NewGameState(level, mode)
+		return initGame(g, &state)
+	}
 }
 
 func gameLoop(g *gocui.Gui, state *zen_doctor.GameState) {
