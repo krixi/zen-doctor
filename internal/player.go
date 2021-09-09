@@ -122,12 +122,12 @@ func (p *Player) CollectLoot(loot Loot) {
 	}
 }
 
-func (p *Player) tickMove(width, height int, threat float32) Coordinate {
+func (p *Player) tickMove(width, height int, threat float32) (Coordinate, bool) {
 	if p.automove {
 		p.tickThreat(threat)
-		return p.move(width, height)
+		return p.move(width, height), true
 	}
-	return p.Location
+	return p.Location, false
 }
 
 func (p *Player) move(width, height int) Coordinate {

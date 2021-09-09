@@ -174,7 +174,9 @@ func (s *GameState) TickMovement() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	c := s.player.tickMove(s.level.Width, s.level.Height, s.level.MovementThreat)
-	s.tickCollisions()
+	c, applyDmg := s.player.tickMove(s.level.Width, s.level.Height, s.level.MovementThreat)
+	if applyDmg {
+		s.tickCollisions()
+	}
 	s.world.Visited(c)
 }
