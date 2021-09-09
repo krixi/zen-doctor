@@ -18,7 +18,7 @@ Controls:
 It's built using [gocui](https://github.com/jroimartin/gocui). To play it, run:
 
 ```shell
-go get github.com/krixi/zen-doctor && go install zen-doctor
+go install github.com/krixi/zen-doctor@latest
 ```
 
 Then you should just be able to run `zen-doctor` to play it. 
