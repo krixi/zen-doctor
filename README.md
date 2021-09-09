@@ -15,7 +15,14 @@ Controls:
 
 
 # about
-It's built using [gocui](https://github.com/jroimartin/gocui). To play it, just clone this repo and run `go run cmd/main.go`
+It's built using [gocui](https://github.com/jroimartin/gocui). To play it, run:
+
+```shell
+go get github.com/krixi/zen-doctor && go install zen-doctor
+```
+
+Then you should just be able to run `zen-doctor` to play it. 
+
 If you can't see all the symbols because your font doesn't support them, try running with `--latin`, or `--ascii` for only ASCII characters.
 
 
