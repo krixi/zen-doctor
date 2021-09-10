@@ -37,29 +37,31 @@ const (
 
 func GameOver(didWin bool, elapsed time.Duration, mode CompatibilityMode, collection ...Loot) string {
 
-	// group collection by type and then by rarity. We want a display like:
+	// group collection by symbol and then by rarity. We want a display like:
 	// 1Δ 5Δ 13Δ 21Δ 6Δ
-	byType := make(map[LootType]map[Rarity]int)
+	byType := make(map[DataKind]map[Rarity]int)
 	for _, loot := range collection {
-		lt := loot.Type
-		r := loot.Rarity
-		if _, ok := byType[lt]; !ok {
-			byType[lt] = make(map[Rarity]int)
-		}
-		if count, ok := byType[lt][r]; ok {
-			byType[lt][r] = count + 1
-		} else {
-			byType[lt][r] = 1
+		dk := loot.DataKind
+		if dk != DataKindNone {
+			r := loot.Rarity
+			if _, ok := byType[dk]; !ok {
+				byType[dk] = make(map[Rarity]int)
+			}
+			if count, ok := byType[dk][r]; ok {
+				byType[dk][r] = count + 1
+			} else {
+				byType[dk][r] = 1
+			}
 		}
 	}
 
-	getLine := func(lt LootType, counts map[Rarity]int) (string, int) {
+	getLine := func(lt DataKind, counts map[Rarity]int) (string, int) {
 		b := strings.Builder{}
 		hierarchy := []Rarity{Legendary, Epic, Rare, Uncommon, Common, Junk}
 		found := 0
 		for _, rarity := range hierarchy {
 			if count, ok := counts[rarity]; ok {
-				b.WriteString(fmt.Sprintf("%d%s ", count, WithColor(rarity.Color(), lt.SymbolForMode(mode))))
+				b.WriteString(fmt.Sprintf("%d%s ", count, WithColor(rarity.Color(), lt.ForMode(mode))))
 				found++
 			}
 		}
@@ -75,10 +77,10 @@ func GameOver(didWin bool, elapsed time.Duration, mode CompatibilityMode, collec
 	} else {
 		b.WriteString(WithColor(Red, "You were caught! Results:\n"))
 	}
-	hierarchy := []LootType{LootTypeDelta, LootTypeLambda, LootTypeSigma, LootTypeOmega}
-	for _, lt := range hierarchy {
-		if counts, ok := byType[lt]; ok {
-			line, found := getLine(lt, counts)
+	hierarchy := []DataKind{DataKindDelta, DataKindLambda, DataKindSigma, DataKindOmega}
+	for _, dk := range hierarchy {
+		if counts, ok := byType[dk]; ok {
+			line, found := getLine(dk, counts)
 			if found > 0 {
 				b.WriteString(line)
 			}
@@ -192,7 +194,7 @@ func (v *View) Apply(s *GameState) {
 
 			// loot
 			if loot, ok := s.world.Loot[c]; ok {
-				if loot.Type != LootTypeEmpty {
+				if loot.Kind != LootEmpty {
 					if inPlayerRange {
 						cell.Foreground, cell.Symbol = loot.SymbolForMode(v.Mode)
 					} else {
@@ -256,7 +258,7 @@ func (v *View) ActionProgressMeter(current, max float32) string {
 func (v *View) DataWanted(state *GameState) string {
 	b := strings.Builder{}
 	for _, want := range state.Level().WinConditions {
-		b.WriteString(fmt.Sprintf("%s %.0f\n", want.Type.SymbolForMode(v.Mode), want.Amount))
+		b.WriteString(fmt.Sprintf("%s %.0f\n", want.Kind.ForMode(v.Mode), want.Amount))
 	}
 	return b.String()
 }
@@ -264,8 +266,8 @@ func (v *View) DataWanted(state *GameState) string {
 func (v *View) DataCollected(state *GameState) string {
 	b := strings.Builder{}
 	for _, want := range state.level.WinConditions {
-		if amount, ok := state.player.DataCollected[want.Type]; ok {
-			str := fmt.Sprintf("%s %.0f\n", want.Type.SymbolForMode(v.Mode), amount)
+		if amount, ok := state.player.DataCollected[want.Kind]; ok {
+			str := fmt.Sprintf("%s %.0f\n", want.Kind.ForMode(v.Mode), amount)
 			if amount > want.Amount {
 				str = WithColor(Green, str)
 			}

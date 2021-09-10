@@ -28,8 +28,14 @@ If you can't see all the symbols because your font doesn't support them, try run
 
 TO-DO list:
 
-1. AI enemies: patrol (with vision cone), follow your tracks, homing on your location (unleashed on 100% threat - game over when they catch you)
-2. Items you can use - build pylons, portals, or things
-3. Power-ups: slow down bit stream, immune to negative bits, speed up looting, multiplier on loot value, timed power up for increasing vision range, timed power up for reducing threat faster, timed "combat" power up that reduces threat when running into an enemy instead of increasing it
+1. Power-ups:
+   1. timed power up for increasing vision range,
+   2. timed power up for reducing threat faster,
+   3. immune to negative bits,
+   4. timed "combat" power up that reduces threat when running into an enemy instead of increasing it
+   5. speed up looting,
+   6. slow down bit stream,
+2. AI enemies: patrol (with vision cone), follow your tracks, homing on your location (unleashed on 100% threat - game over when they catch you)
+3. Items you can use - build pylons, portals, or things. More advanced levels? i.e. once you make it past the firewall, you are inside the mainframe - no longer a constant bit stream, but a maze with enemies and specific objectives.
 4. Walls and things that interrupt the bit stream - give shelter
 5. Show stats at end of game for collisions with bit stream - how many and what kind of both good and bad bits

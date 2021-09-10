@@ -2,8 +2,9 @@ package zen_doctor
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLevelConfigs(t *testing.T) {
@@ -17,26 +18,40 @@ func TestLevelConfigs(t *testing.T) {
 			// each level must have an updater and win conditions defined
 			assert.NotNil(t, level.Updater, "must have updater")
 			assert.NotEmpty(t, level.WinConditions, "must have win conditions")
+			assert.NotEmpty(t, level.PowerUpLootTable, "must have power ups")
+			assert.NotEmpty(t, level.DataLootTable, "must have data")
 
 			// The sum of the loot tables must be 1
 			sum := float32(0.0)
-			for _, amount := range level.LootTable {
-				sum += amount
+			for _, entry := range level.DataLootTable {
+				sum += entry.Chance
 			}
-			assert.Equal(t, float32(1.0), sum, "sum of chances in loot table must equal 1")
+			assert.Equal(t, float32(1.0), sum, "sum of chances in DataLootTable must equal 1")
+
+			sum = float32(0.0)
+			for _, entry := range level.PowerUpLootTable {
+				sum += entry.Chance
+			}
+			assert.Equal(t, float32(1.0), sum, "sum of chances in PowerUpLootTable must equal 1")
 
 			// Loot exists in the loot table for all win conditions
 			for _, cond := range level.WinConditions {
-				_, ok := level.LootTable[cond.Type]
-				assert.True(t, ok, "must include loot table for all win conditions")
+				found := false
+				for _, loot := range level.DataLootTable {
+					if cond.Kind == loot.Data {
+						found = true
+					}
+				}
+				assert.True(t, found, "must include loot table for all win conditions")
 			}
 
 			// all decay values should be negative
 			assert.True(t, 0 > level.LeaveSpeedDecay, "LeaveSpeedDecay must be negative")
-			assert.True(t, 0 > level.LootDecayRate, "LootDecayRate must be negative")
+			assert.True(t, 0 > level.DataDecayRate, "DataDecayRate must be negative")
 			assert.True(t, 0 > level.FootprintDecay, "FootprintDecay must be negative")
 			assert.True(t, 0 > level.ThreatDecay, "ThreatDecay must be negative")
 			assert.True(t, 0 > level.LootSpeedDecay, "LootSpeedDecay must be negative")
+			assert.True(t, 0 > level.PowerUpDecayRate, "LootSpeedDecay must be negative")
 
 			// width and height must be defined
 			assert.True(t, level.Width > 0, "Width must be positive")

@@ -59,11 +59,6 @@ func (s *LoopingSymbol) ForMode(mode CompatibilityMode) string {
 
 var AnimatedExit = LoopingSymbol{
 	Frames: []symbol{
-		//{
-		//	Runic: `ᛟ`,
-		//	Latin: `Ξ`,
-		//	ASCII: `.`,
-		//},
 		{
 			Runic: `▁`,
 			Latin: `▁`,
@@ -117,33 +112,33 @@ var PlayerSymbol = symbol{
 // Helpful stream
 var GoodBit1 = symbol{
 	Runic: `ᚭ`,
-	Latin: `1`,
-	ASCII: `1`,
+	Latin: `a`,
+	ASCII: `a`,
 }
 var GoodBit2 = symbol{
 	Runic: `ᚬ`,
-	Latin: `2`,
-	ASCII: `2`,
+	Latin: `b`,
+	ASCII: `b`,
 }
 var GoodBit3 = symbol{
 	Runic: `ᛊ`,
-	Latin: `3`,
-	ASCII: `3`,
+	Latin: `c`,
+	ASCII: `c`,
 }
 var GoodBit4 = symbol{
 	Runic: `ᛝ`,
-	Latin: `4`,
-	ASCII: `4`,
+	Latin: `d`,
+	ASCII: `d`,
 }
 var GoodBit5 = symbol{
 	Runic: `ᚠ`,
-	Latin: `5`,
-	ASCII: `5`,
+	Latin: `e`,
+	ASCII: `e`,
 }
 var GoodBit6 = symbol{
 	Runic: `ᚥ`,
-	Latin: `6`,
-	ASCII: `6`,
+	Latin: `f`,
+	ASCII: `f`,
 }
 
 // Harmful stream
@@ -274,7 +269,7 @@ func GenerateNoiseSymbolFor(bitType RevealedBitType, rarity Rarity) AnimatedSymb
 	return &noiseSymbol
 }
 
-// Loot symbols
+// Data symbols
 var DeltaSymbol = symbol{
 	Runic: `Δ`,
 	Latin: `Δ`,
@@ -300,6 +295,37 @@ var ProgressBarSymbol = symbol{
 	Runic: `█`,
 	Latin: `█`,
 	ASCII: `#`,
+}
+
+// PowerUpSymbols
+var VisionRangeSymbol = symbol{
+	Runic: `ᛟ`,
+	Latin: `1`,
+	ASCII: `1`,
+}
+
+var ThreatDecaySymbol = symbol{
+	Runic: `ᚣ`,
+	Latin: `2`,
+	ASCII: `2`,
+}
+
+var BadBitImmunitySymbol = symbol{
+	Runic: `ᚻ`,
+	Latin: `3`,
+	ASCII: `3`,
+}
+
+var BadBitsAreGoodSymbol = symbol{
+	Runic: `ᚩ`,
+	Latin: `4`,
+	ASCII: `4`,
+}
+
+var LootSpeedSymbol = symbol{
+	Runic: `ᛰ`,
+	Latin: `5`,
+	ASCII: `5`,
 }
 
 const (

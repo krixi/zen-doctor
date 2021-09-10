@@ -79,65 +79,122 @@ func getRarity(level *LevelConfig) Rarity {
 	}
 }
 
-type LootType int
+type DataKind int
 
 const (
-	LootTypeEmpty LootType = iota
-	LootTypeDelta
-	LootTypeOmega
-	LootTypeSigma
-	LootTypeLambda
+	DataKindNone DataKind = iota
+	DataKindDelta
+	DataKindLambda
+	DataKindSigma
+	DataKindOmega
 )
 
-func (lt LootType) SymbolForMode(mode CompatibilityMode) string {
-	switch lt {
-	case LootTypeDelta:
+func (k DataKind) ForMode(mode CompatibilityMode) string {
+	switch k {
+	case DataKindDelta:
 		return DeltaSymbol.ForMode(mode)
-	case LootTypeOmega:
+	case DataKindOmega:
 		return OmegaSymbol.ForMode(mode)
-	case LootTypeSigma:
+	case DataKindSigma:
 		return SigmaSymbol.ForMode(mode)
-	case LootTypeLambda:
+	case DataKindLambda:
 		return LambdaSymbol.ForMode(mode)
 	default:
-		return " "
+		return ` `
 	}
 }
 
-func getLootType(level *LevelConfig) LootType {
-	picked := rand.Float32()
-	lower := float32(0.0)
-	for lt, chance := range level.LootTable {
-		upper := lower + chance
-		if picked >= lower && picked < upper {
-			return lt
-		}
-		lower = upper
+type PowerUpKind int
+
+const (
+	PowerUpNone PowerUpKind = iota
+	PowerUpVisionRange
+	PowerUpThreatDecay
+	PowerUpBadBitImmunity
+	PowerUpBadBitsAreGood
+	PowerUpLootSpeed
+)
+
+func (k PowerUpKind) ForMode(mode CompatibilityMode) string {
+	switch k {
+	case PowerUpVisionRange:
+		return VisionRangeSymbol.ForMode(mode)
+	case PowerUpThreatDecay:
+		return ThreatDecaySymbol.ForMode(mode)
+	case PowerUpBadBitImmunity:
+		return BadBitImmunitySymbol.ForMode(mode)
+	case PowerUpBadBitsAreGood:
+		return BadBitsAreGoodSymbol.ForMode(mode)
+	case PowerUpLootSpeed:
+		return LootSpeedSymbol.ForMode(mode)
+	default:
+		return ` `
 	}
-	return level.DefaultLootType
 }
+
+type lootTable []lootOption
+
+func (lt *lootTable) Chance(idx int) float32 {
+	if idx >= len(*lt) {
+		return 0
+	}
+	return (*lt)[idx].Chance
+}
+
+func (lt *lootTable) Len() int {
+	return len(*lt)
+}
+
+type lootOption struct {
+	Data    DataKind
+	PowerUp PowerUpKind
+	Chance  float32
+}
+
+type LootKind int
+
+const (
+	LootEmpty LootKind = iota
+	LootData
+	LootPowerUp
+)
 
 type Loot struct {
-	Type      LootType
-	Rarity    Rarity
-	Data      float32
-	Integrity float32 // set to 1 initially, when it hits 0, the loot becomes worthless.
+	Kind        LootKind
+	Rarity      Rarity
+	PowerUpKind PowerUpKind
+	DataKind    DataKind
+	Data        float32
+	Integrity   float32 // set to 1 initially, when it hits 0, the loot becomes worthless and disappears
 }
 
-func newLoot(level *LevelConfig) Loot {
-	lootType := getLootType(level)
+func newLoot(kind LootKind, level *LevelConfig) Loot {
 	rarity := getRarity(level)
-	data := level.DataByRarity[rarity] * level.DataMultipliers[lootType]
-	return Loot{
-		Type:      lootType,
+	loot := Loot{
+		Kind:      kind,
 		Rarity:    rarity,
-		Data:      data,
 		Integrity: 1,
 	}
+	switch kind {
+	case LootData:
+		dataKind := level.DataLootTable[pickOne(&level.DataLootTable)].Data
+		data := level.DataByRarity[rarity] * level.DataMultipliers[dataKind]
+		loot.Data, loot.DataKind = data, dataKind
+	case LootPowerUp:
+		powerUpKind := level.PowerUpLootTable[pickOne(&level.PowerUpLootTable)].PowerUp
+		loot.PowerUpKind = powerUpKind
+	}
+	return loot
 }
 
 func (l *Loot) SymbolForMode(mode CompatibilityMode) (Color, string) {
-	return l.Rarity.Color(), l.Type.SymbolForMode(mode)
+	switch l.Kind {
+	case LootData:
+		return l.Rarity.Color(), l.DataKind.ForMode(mode)
+	case LootPowerUp:
+		return l.Rarity.Color(), l.PowerUpKind.ForMode(mode)
+	}
+	return l.Rarity.Color(), ` `
 }
 
 func (l *Loot) tick(rate float32) {
@@ -145,7 +202,7 @@ func (l *Loot) tick(rate float32) {
 	if l.Integrity < 0 {
 		l.Data = 0
 		l.Rarity = Junk
-		l.Type = LootTypeEmpty
+		l.Kind = LootEmpty
 	}
 }
 
@@ -174,11 +231,12 @@ func (f *Footprint) WithIntensity() (Color, string) {
 }
 
 type World struct {
-	Level             *LevelConfig
-	Loot              map[Coordinate]Loot
-	Footprints        map[Coordinate]Footprint
-	LootSpawnProgress float32
-	Exit              *Coordinate
+	Level                *LevelConfig
+	Loot                 map[Coordinate]Loot
+	Footprints           map[Coordinate]Footprint
+	DataSpawnProgress    float32
+	PowerUpSpawnProgress float32
+	Exit                 *Coordinate
 }
 
 func newWorld(level *LevelConfig) World {
@@ -187,26 +245,29 @@ func newWorld(level *LevelConfig) World {
 		Loot:       make(map[Coordinate]Loot),
 		Footprints: make(map[Coordinate]Footprint),
 	}
-	world.spawnLoot(level.InitialLoot)
+	world.spawnLoot(level.InitialData, LootData)
+	world.spawnLoot(level.InitialPowerUps, LootPowerUp)
 	return world
 }
 
 func (w *World) DidCollideWithLoot(c Coordinate) bool {
 	if l, ok := w.Loot[c]; ok {
-		return l.Type != LootTypeEmpty
+		return l.Kind != LootEmpty
 	}
 	return false
 }
 
 func (w *World) ExtractLoot(c Coordinate) Loot {
 	if l, ok := w.Loot[c]; ok {
-		w.Loot[c] = Loot{Type: LootTypeEmpty}
+		w.Loot[c] = Loot{Kind: LootEmpty}
 		return l
 	}
-	return Loot{Type: LootTypeEmpty}
+	return Loot{
+		Kind: LootEmpty,
+	}
 }
 
-func (w *World) spawnLoot(n int) {
+func (w *World) spawnLoot(n int, kind LootKind) {
 	filled := 0
 	for filled < n {
 		// make sure it's empty first
@@ -215,8 +276,8 @@ func (w *World) spawnLoot(n int) {
 		c := Coordinate{x, y}
 
 		// even though it's a sparse map, this should work due to default types in go :squint:
-		if w.Loot[c].Type == LootTypeEmpty {
-			w.Loot[c] = newLoot(w.Level)
+		if w.Loot[c].Kind == LootEmpty {
+			w.Loot[c] = newLoot(kind, w.Level)
 			filled++
 		}
 	}
@@ -233,8 +294,8 @@ func (w *World) TickLoot() {
 	// tick all existing loot
 	newLoot := make(map[Coordinate]Loot)
 	for c, loot := range w.Loot {
-		loot.tick(w.Level.LootDecayRate)
-		if loot.Type != LootTypeEmpty {
+		loot.tick(w.Level.DataDecayRate)
+		if loot.Kind != LootEmpty {
 			newLoot[c] = loot
 		}
 	}
@@ -242,14 +303,19 @@ func (w *World) TickLoot() {
 
 	// make sure there's always at least one loot in the world
 	if len(newLoot) == 0 {
-		w.spawnLoot(1)
+		w.spawnLoot(1, LootData)
 	}
 
 	// spawn new loot if needed
-	w.LootSpawnProgress += w.Level.LootSpawnRate
-	if w.LootSpawnProgress > 1 {
-		w.LootSpawnProgress = 0
-		w.spawnLoot(1)
+	w.DataSpawnProgress += w.Level.DataSpawnRate
+	if w.DataSpawnProgress > 1 {
+		w.DataSpawnProgress = 0
+		w.spawnLoot(1, LootData)
+	}
+	w.PowerUpSpawnProgress += w.Level.PowerUpSpawnRate
+	if w.PowerUpSpawnProgress > 1 {
+		w.PowerUpSpawnProgress = 0
+		w.spawnLoot(1, LootPowerUp)
 	}
 }
 

@@ -10,7 +10,7 @@ type Player struct {
 	Threat        float32
 	Inventory     []Loot
 	CurrentAction playerAction
-	DataCollected map[LootType]float32
+	DataCollected map[DataKind]float32
 
 	// movement support
 	lastInput time.Time
@@ -71,7 +71,7 @@ func newPlayer(loc Coordinate) Player {
 	return Player{
 		Location:      loc,
 		Threat:        0,
-		DataCollected: map[LootType]float32{},
+		DataCollected: map[DataKind]float32{},
 	}
 }
 
@@ -108,15 +108,20 @@ func (p *Player) isDetected(maxThreat float32) bool {
 }
 
 func (p *Player) CollectLoot(loot Loot) {
-	if loot.Type != LootTypeEmpty {
+	if loot.Kind != LootEmpty {
 		p.Inventory = append(p.Inventory, loot)
 		sort.Slice(p.Inventory, func(i, j int) bool {
 			return p.Inventory[i].Rarity > p.Inventory[j].Rarity
 		})
-		if val, ok := p.DataCollected[loot.Type]; ok {
-			p.DataCollected[loot.Type] = val + loot.Data
-		} else {
-			p.DataCollected[loot.Type] = loot.Data
+		switch loot.Kind {
+		case LootData:
+			if val, ok := p.DataCollected[loot.DataKind]; ok {
+				p.DataCollected[loot.DataKind] = val + loot.Data
+			} else {
+				p.DataCollected[loot.DataKind] = loot.Data
+			}
+		case LootPowerUp:
+			// TODO
 		}
 		p.CurrentAction.Progress = 0
 	}
